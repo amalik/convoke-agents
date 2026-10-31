@@ -36,6 +36,7 @@ Main update command — applies migrations and refreshes your installation.
 | Flag | Description |
 |------|-------------|
 | `--dry-run` | Preview changes without applying |
+| `--refresh` | Re-install Convoke's files even when already current (a deleted skill wrapper or taxonomy file, say), with the usual backup and prompt |
 | `--yes` or `-y` | Skip confirmation prompt |
 | `--verbose` or `-v` | Show detailed output |
 
@@ -461,6 +462,13 @@ npx -p convoke-agents@latest convoke-update
 
 This tells npx to download `convoke-agents@latest` first, then run the `convoke-update` bin from it.
 
+### "Already up to date" but a file is missing
+
+When you are on the current version, `convoke-update` changes nothing, even if you deleted a skill wrapper,
+`_bmad/_config/taxonomy.yaml` or a module config. `convoke-update --refresh` re-installs Convoke's files at the
+same version, after the usual backup and confirmation; `--refresh --dry-run` shows what it would do. This is
+what `convoke-doctor` advises for those findings.
+
 ### "refusing to overwrite ... config.yaml"
 
 From 4.0.3 the **Vortex and Gyre** `config.yaml` files were never replaced when they could not be read,
@@ -592,11 +600,12 @@ check. Repair the file itself:
    added there are kept. If the damaged file is one of those three, a repair you made at step 1 to
    one of its own keys is reset too; for those three, use step 2.
 
-> **`convoke-update` will not do this, and it will not tell you so.** On an installation that is
+> **Plain `convoke-update` will not do this, and will not tell you the file is missing.** On an installation that is
 > otherwise current it stops at `✓ Already up to date!` and exits **0** without reaching the code
 > that writes the configs — so a config you deleted at step 2 stays deleted, and the command reports
 > success. All four Gyre agents read `_bmad/bme/_gyre/config.yaml` when they start, so a missing one
-> leaves them unable to start with nothing on screen to explain why. Always finish with an install.
+> leaves them unable to start with nothing on screen to explain why. Always finish with an install, or with
+> `convoke-update --refresh`, which does reach that code and backs up first.
 
 Every config in that table is checked, so a damaged one in **any** of those modules blocks every install
 command — a broken `_artifacts/config.yaml` stops `convoke-install-vortex` too. Fix whichever file

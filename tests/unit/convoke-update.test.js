@@ -1194,3 +1194,85 @@ describe('T278: convoke-update reports every failure and every unanswered prompt
     }
   });
 });
+
+describe('T263: --refresh re-installs an installation that is already current', () => {
+  // Not an agent: a missing agent makes the assessment report an incomplete installation instead.
+  const MISSING = '_bmad/_config/taxonomy.yaml';
+  const backups = (dir) => {
+    const at = path.join(dir, '_bmad-output', '.backups');
+    return fs.existsSync(at) ? fs.readdirSync(at) : [];
+  };
+
+  it('without it, a current installation refreshes nothing — and is told about --refresh', async () => {
+    const tmpDir = await createTempDir('convoke-t263-');
+    try {
+      await createValidInstallation(tmpDir);
+      fs.removeSync(path.join(tmpDir, MISSING));
+      const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+      assert.equal(exitCode, 0);
+      assert.ok(stdout.includes('Already up to date!'), stdout);
+      const version = require(path.join(PACKAGE_ROOT, 'package.json')).version;
+      assert.ok(stdout.includes(`npx -p convoke-agents@${version} convoke-update --refresh`),
+        'the up-to-date message must name the way to refresh anyway, pinned like the doctor\'s fixes');
+      assert.ok(!fs.existsSync(path.join(tmpDir, MISSING)), 'fixture: a plain update restored the file after all');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('with it, the files are restored, after a backup', async () => {
+    const tmpDir = await createTempDir('convoke-t263-');
+    try {
+      await createValidInstallation(tmpDir);
+      fs.removeSync(path.join(tmpDir, MISSING));
+      const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--refresh', '--yes'], { cwd: tmpDir });
+      assert.equal(exitCode, 0, stdout);
+      assert.ok(stdout.includes('(already current)'), stdout);
+      assert.ok(fs.existsSync(path.join(tmpDir, MISSING)), 'the refresh must restore the file');
+      assert.ok(backups(tmpDir).length > 0, 'the refresh must take the update\'s backup first');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('with --dry-run, it writes nothing', async () => {
+    const tmpDir = await createTempDir('convoke-t263-');
+    try {
+      await createValidInstallation(tmpDir);
+      fs.removeSync(path.join(tmpDir, MISSING));
+      const { exitCode } = await runScript(SCRIPT_PATH, ['--refresh', '--dry-run'], { cwd: tmpDir });
+      assert.equal(exitCode, 0);
+      assert.ok(!fs.existsSync(path.join(tmpDir, MISSING)));
+      assert.deepEqual(backups(tmpDir), []);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('where there is no installation to re-install, it says the flag did nothing', async () => {
+    const tmpDir = await createTempDir('convoke-t263-');
+    try {
+      await createValidInstallation(tmpDir);
+      fs.removeSync(path.join(tmpDir, '_bmad/bme/_vortex'));
+      const { stdout } = await runScript(SCRIPT_PATH, ['--refresh', '--yes'], { cwd: tmpDir });
+      assert.ok(stdout.includes('--refresh has no effect here'), stdout);
+      const plain = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+      assert.ok(!plain.stdout.includes('--refresh has no effect'), 'only said when the flag was given');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('with an unanswered prompt, it applies nothing and exits 1', async () => {
+    const tmpDir = await createTempDir('convoke-t263-');
+    try {
+      await createValidInstallation(tmpDir);
+      fs.removeSync(path.join(tmpDir, MISSING));
+      const { exitCode } = await runScriptWithInput(SCRIPT_PATH, ['--refresh'], '', { cwd: tmpDir });
+      assert.equal(exitCode, 1);
+      assert.ok(!fs.existsSync(path.join(tmpDir, MISSING)));
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+});

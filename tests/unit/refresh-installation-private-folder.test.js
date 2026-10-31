@@ -197,9 +197,10 @@ describe('T256: convoke-doctor warns about the private reports folder', () => {
     assert.equal(checkPrivateReports(dir)[0].passed, true, 'git was not asked: a harmless negation was refused');
   });
 
-  it('pins the install it suggests for a missing rule, and gives an edit for a weak one', () => {
+  it('pins the refresh it suggests for a missing rule, and gives an edit for a weak one', () => {
     const [missing] = checkPrivateReports(dir);
-    assert.equal(missing.fix, `Run: npx -p convoke-agents@${getPackageVersion()} convoke-install-vortex`);
+    // T263: a refresh, which backs up first and runs migrations on an installation that is behind.
+    assert.equal(missing.fix, `Run: npx -p convoke-agents@${getPackageVersion()} convoke-update --refresh (creates it)`);
     fs.outputFileSync(path.join(dir, PRIVATE_REL, '.gitignore'), '# nothing\n');
     const [weak] = checkPrivateReports(dir);
     assert.match(weak.fix, /^Edit _bmad-output\/private\/\.gitignore/, 'an install leaves an existing rule alone, so it cannot be the fix');
@@ -257,10 +258,12 @@ describe('T256: what the operator is told', () => {
     assert.ok(lines.some((l) => l.includes('_bmad-output/private/.gitignore')), lines.join('\n'));
   });
 
-  it('the workflow checks with git before saving, and offers the project\'s own installer', () => {
+  it('the workflow checks with git before saving, and offers a refresh', () => {
     const wf = fs.readFileSync(path.join(PACKAGE_ROOT, '_bmad/bme/_vortex/workflows/user-interview/workflow.md'), 'utf8');
     assert.match(wf, /git check-ignore -q _bmad-output\/private\/user-interview-/);
-    assert.match(wf, /offer `npx convoke-install-vortex`/);
+    // T263: a refresh, as convoke-doctor advises for the same state — it backs up first, and an
+    // install skips the migrations of an installation that is behind.
+    assert.match(wf, /offer `npx -p convoke-agents convoke-update --refresh`/);
     assert.match(wf, /run it only if they agree/);
   });
 });

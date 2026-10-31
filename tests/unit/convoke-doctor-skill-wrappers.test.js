@@ -15,6 +15,7 @@ const os = require('os');
 
 const { loadSkillManifest, checkModuleSkillWrappers } = require('../../scripts/convoke-doctor');
 const PKG_VERSION = require('../../package.json').version;
+const PACKAGE_ROOT = path.join(__dirname, '..', '..');
 
 const ARTIFACTS_MANIFEST_ROWS = [
   'canonicalId,name,description,module,path,install_to_bmad,tier,intent,dependencies',
@@ -215,7 +216,26 @@ describe('ag-7-2: checkModuleSkillWrappers — missing Artifacts wrapper', () =>
     assert.equal(result.passed, false);
     assert.match(result.error, /Missing skill wrapper for bmad-migrate-artifacts/);
     assert.match(result.error, /\.claude\/skills\/bmad-migrate-artifacts\/SKILL\.md/);
-    assert.equal(result.fix, `Run: npx -p convoke-agents@${PKG_VERSION} convoke-update (regenerates skill wrappers)`);
+    // T263: --refresh — a plain convoke-update refreshes nothing on a current installation.
+    assert.equal(result.fix, `Run: npx -p convoke-agents@${PKG_VERSION} convoke-update --refresh (regenerates skill wrappers)`);
+  });
+
+  it('T263: a module Convoke does not ship is not told a refresh will regenerate it', async () => {
+    await fs.remove(path.join(tmpDir, '.claude/skills/bmad-migrate-artifacts'));
+    const map = loadSkillManifest(tmpDir);
+    const result = checkModuleSkillWrappers({ ...makeArtifactsMod(tmpDir), name: '_operator-module' }, tmpDir, map);
+    assert.equal(result.passed, false);
+    assert.doesNotMatch(result.fix, /npx|convoke-/, 'no Convoke command regenerates a module it does not ship');
+    assert.match(result.fix, /_operator-module/);
+  });
+
+  it('T263: "ships" means the published package, not this checkout', async () => {
+    // _team-factory is in the source tree but not in package.json `files`.
+    assert.ok(fs.existsSync(path.join(PACKAGE_ROOT, '_bmad/bme/_team-factory')), 'fixture: the checkout has _team-factory');
+    await fs.remove(path.join(tmpDir, '.claude/skills/bmad-migrate-artifacts'));
+    const map = loadSkillManifest(tmpDir);
+    const result = checkModuleSkillWrappers({ ...makeArtifactsMod(tmpDir), name: '_team-factory' }, tmpDir, map);
+    assert.doesNotMatch(result.fix, /npx|convoke-/);
   });
 });
 

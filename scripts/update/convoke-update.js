@@ -285,6 +285,11 @@ async function main() {
   const dryRun = args.includes('--dry-run');
   const yes = args.includes('--yes') || args.includes('-y');
   const verbose = args.includes('--verbose') || args.includes('-v');
+  // T263: refresh an installation that is already current — the files a refresh owns, with the
+  // backup, plan and prompt a refresh always has. What convoke-doctor advises for a missing skill
+  // wrapper or taxonomy: without it, an update on a current installation changes nothing, and an
+  // install refreshes with no backup (and, on an installation that is behind, skips migrations).
+  const refresh = args.includes('--refresh');
 
   // Header
   console.log('');
@@ -299,6 +304,13 @@ async function main() {
   if (projectRoot) runCompatPreflight(projectRoot);
 
   const assessment = assessUpdate(projectRoot);
+
+  // T263: an upgrade, or a refresh already due, refreshes anyway. Anything else is not an
+  // installation a refresh can re-install, so say the flag did nothing before the advice below.
+  if (refresh && !['up-to-date', 'refresh-only', 'upgrade'].includes(assessment.action)) {
+    console.log(chalk.yellow('--refresh has no effect here: there is no current installation to re-install.'));
+    console.log('');
+  }
 
   switch (assessment.action) {
     case 'no-project':
@@ -334,6 +346,12 @@ async function main() {
       return;
 
     case 'up-to-date':
+      if (refresh) {
+        assessment.action = 'refresh-only';
+        assessment.targetVersion = assessment.currentVersion;
+        assessment.forcedRefresh = true;
+        break;
+      }
       console.log(chalk.green(`✓ Already up to date! (v${assessment.currentVersion})`));
       console.log('');
       // Names no dist-tag on purpose: `@latest` is wrong for anyone on a prerelease (it
@@ -346,6 +364,10 @@ async function main() {
       console.log(chalk.gray('  An older Convoke installed globally: ') + chalk.cyan('npm ls -g --depth=0 convoke-agents'));
       console.log(chalk.gray('  npx serving a cached copy:           ') + chalk.cyan('npm cache clean --force'));
       console.log(chalk.gray('  Checking what is actually published: ') + chalk.cyan('npm view convoke-agents dist-tags'));
+      console.log('');
+      // T263: not one of the causes above — a separate line, pinned like the doctor's fixes.
+      console.log(chalk.gray('To re-install Convoke\'s files anyway (a deleted skill wrapper, say): ')
+        + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-update --refresh`));
       console.log('');
       process.exitCode = 0;
       return;
@@ -390,7 +412,11 @@ async function main() {
       && assessment.currentVersion === assessment.targetVersion;
 
     console.log(chalk.cyan('Update Plan:'));
-    if (skewOnly) {
+    if (assessment.forcedRefresh) {
+      console.log(`  Version: ${chalk.green(assessment.currentVersion)} (already current)`);
+      console.log('');
+      console.log(chalk.cyan('--refresh: re-installing Convoke\'s files at the same version.'));
+    } else if (skewOnly) {
       console.log(`  Package: ${chalk.green(assessment.targetVersion)}`);
       // Label from the module's own state: `4.0.1+abc` is not BEHIND `4.0.1`, it is divergent
       // (equal precedence, different string). A refresh re-stamps both; the word must still be true.
