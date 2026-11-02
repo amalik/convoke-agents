@@ -106,6 +106,9 @@ _bmad-output/user-interview-*
 # T256: the rule above is one level off — the workflow wrote to vortex-artifacts/. It now writes to
 # _bmad-output/private/, whose own .gitignore keeps the reports out; both are listed here for this repository too.
 _bmad-output/vortex-artifacts/user-interview-*
-_bmad-output/private/
+# Everything in private/ except its rule, which is committed as UPDATE-GUIDE.md tells operators to do
+# (T256 ruling D1) — and which UPDATE-GUIDE.md cites, so docs:audit needs it in a clean checkout.
+_bmad-output/private/*
+!_bmad-output/private/.gitignore
 _bmad-output/interviews/
 *.transcript.md

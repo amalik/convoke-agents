@@ -1,0 +1,5 @@
+# Written by Convoke (T256). Reports in this folder hold personal data — interview notes about
+# real, identifiable people — so git ignores everything here except this file. Commit this file,
+# so every clone of the project keeps the reports out of git too.
+*
+!.gitignore
