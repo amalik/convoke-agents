@@ -5,6 +5,16 @@ const path = require('path');
 const configMerger = require('../update/lib/config-merger');
 
 /**
+ * T266: the module's profile, from its config path, so a malformed list's warning names only the
+ * ids that apply. `profileFor` is own-property only, so an odd directory name yields undefined.
+ */
+function readExclusions(projectRoot, configRel) {
+  const moduleName = configRel.split('/').slice(-2, -1)[0];
+  return configMerger.readExcludedAgents(path.join(projectRoot, configRel),
+    { profile: configMerger.profileFor(moduleName) });
+}
+
+/**
  * The verification checks an installer should run, given the operator's opt-out list.
  *
  * T251: both installers listed every registry agent's agent file AND its skill wrapper
@@ -35,9 +45,7 @@ const configMerger = require('../update/lib/config-merger');
  * @returns {Array<{path: string, name: string, expect: 'present'|'absent'}>}
  */
 function agentInstallChecks({ projectRoot, agents, configRel, agentFileFor, excluded: provided }) {
-  const excluded = new Set(
-    provided || configMerger.readExcludedAgents(path.join(projectRoot, configRel))
-  );
+  const excluded = new Set(provided || readExclusions(projectRoot, configRel));
 
   const checks = [];
   for (const agent of agents) {
@@ -108,7 +116,7 @@ function checkHolds(check, exists) {
  *            excluded: string[], allHeld: boolean, anyPresentExpected: boolean}}
  */
 function evaluateAgentInstall({ projectRoot, agents, configRel, agentFileFor }) {
-  const excluded = configMerger.readExcludedAgents(path.join(projectRoot, configRel));
+  const excluded = readExclusions(projectRoot, configRel);
   const checks = agentInstallChecks({ projectRoot, agents, configRel, agentFileFor, excluded });
   const results = checks.map((check) => {
     const exists = pathPresent(projectRoot, check.path);

@@ -232,7 +232,8 @@ describe('T244 — no unaugmented re-implementation under scripts/ (a floor, not
   // so matching the require path gave a free pass to any file that pulled in `mergeConfig` or
   // `declaredUnits` for something unrelated and then re-implemented the coercion anyway. An
   // exemption that broad launders exactly what it is meant to scope. Match the FUNCTION.
-  const AUTHORITY_FNS = ['parseExcludedAgents', 'readExcludedAgents', 'parseExcludedAgentsLocal'];
+  // `classifyExclusions` (T266) parses through `parseExcludedAgents` and adds only the roster split.
+  const AUTHORITY_FNS = ['parseExcludedAgents', 'readExcludedAgents', 'parseExcludedAgentsLocal', 'classifyExclusions'];
   const usesAuthority = (src) => AUTHORITY_FNS.some((fn) => new RegExp(`\\b${fn}\\b`).test(src));
 
   /** Comments stripped, so a file that merely MENTIONS the field in prose is not an offender. */
@@ -393,7 +394,8 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
     // false for a user-added agent, whose exclusion does take effect. What it must still say is
     // what to do and that the rest of the list stands.
     assert.match(m, /Check the spelling/, 'the operator needs an action, not just a diagnosis');
-    assert.match(m, /any other id in the list still applies/, '...and that the rest of the list stands');
+    // T266 R2: not "still applies" — beside a pending id that read as saying it had applied.
+    assert.match(m, /any other id in the list is unaffected by it/, '...and that the rest of the list stands');
     assert.doesNotMatch(m, /Nothing was excluded for/,
       'that claim was false for a user-added agent and must not come back');
     // Singular vs plural, since the sentence reads wrongly if it does not agree.

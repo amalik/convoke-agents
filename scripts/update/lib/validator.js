@@ -123,8 +123,10 @@ async function validateAgentFiles(projectRoot) {
     // U8: honor operator agent exclusions from the target config.yaml, so a
     // deliberately-removed agent doesn't fail post-upgrade validation.
     const configMerger = require('./config-merger');
+    // T266: with the profile, a malformed list's warning names only the ids that apply.
     const excluded = configMerger.readExcludedAgents(
-      path.join(projectRoot, '_bmad/bme/_vortex/config.yaml')
+      path.join(projectRoot, '_bmad/bme/_vortex/config.yaml'),
+      { profile: configMerger.MODULE_PROFILES._vortex }
     );
     // Story v63-3-1: Vortex agents are now skill-dirs (`<id>/SKILL.md`)
     // per BMAD v6.3 convention. VORTEX_SKILL_PATHS is the post-migration

@@ -7,7 +7,7 @@ const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 const { AGENTS, GYRE_AGENTS } = require('./update/lib/agent-registry');
 const {
-  parseExcludedAgents, partitionExclusions, profileFor,
+  MODULE_PROFILES, classifyExclusions, exclusionOwner, profileFor,
   malformedExclusionMessage, unknownExclusionMessage,
 } = require('./update/lib/config-merger');
 // The authority on what `convoke-register-skill` can carry, exported by the command itself.
@@ -92,7 +92,7 @@ async function main() {
     if (configCheck.passed) {
       // NOT gated on `agents`: an operator can write an opt-out into a config whose `agents:` key
       // is absent or empty, and that is exactly when they most need to be told it did nothing.
-      checks.push(...checkExcludedAgents(mod));
+      checks.push(...checkExcludedAgents(mod, projectRoot, modules));
       if (Array.isArray(mod.config.agents) && mod.config.agents.length > 0) {
         checks.push(checkModuleAgents(mod));
       }
@@ -140,24 +140,28 @@ async function main() {
  * install output scrolls past and doctor is where an operator looks when an agent they opted out is
  * still there.
  *
- * TWO CLASSES, one finding at a time, because they are the same question for the operator ("why is
- * this agent still here?") and two rows about one field is the noise that trains them to skip both:
- *   - MALFORMED (`conforming === false`) — roster-free, so it is reported for every module.
- *   - UNKNOWN id — needs the module's roster, so it is reported only where a profile exists.
- *     `T266` owns extending that to the four modules `MODULE_PROFILES` has no entry for; until
- *     then this check is silent for them rather than guessing.
+ * ONE FINDING per module, because these are one question for the operator ("why is this agent
+ * still here?") and two rows about one field is the noise that trains them to skip both. In order:
+ *   - NOT READ (T266) — a module without a profile: the install never reads its list.
+ *   - MALFORMED (`conforming === false`) — roster-free.
+ *   - UNKNOWN id — needs the module's roster, so only where a profile exists.
+ * and PENDING (T266) — a shipped agent opted out whose skill wrapper is still installed — appended
+ * to whichever of those shows, or on its own.
  *
- * Both texts come from `config-merger`, so this finding and the install-path warning cannot drift
- * into two descriptions of one defect.
+ * The malformed and unknown texts come from `config-merger`, so this finding and the install-path
+ * warning cannot drift into two descriptions of one defect; both name the same ids as applying.
  *
  * `softWarning`, not an error: the opt-out is an optional field and a wrong value does not make the
  * installation broken. That matches the operator ruling on the install path — warn and proceed.
  *
  * @param {object} mod - A discovered module: `{ name, dir, config }`.
+ * @param {string} [projectRoot]
+ * @param {object[]} [modules] - Every discovered module, so a list that is not read can say whether
+ *   the owning module already opts the agent out.
  * @returns {object[]} Zero or one finding.
  */
-function checkExcludedAgents(mod) {
-  const parsed = parseExcludedAgents(mod.config.excluded_agents);
+function checkExcludedAgents(mod, projectRoot = projectRootOf(mod), modules = discoverModules(projectRoot)) {
+  const parsed = classifyExclusions(mod.name, mod.config, wrapperInstalledIn(projectRoot));
   // Absent is the overwhelmingly common case and says nothing about the operator's intent.
   //
   // This early return is REDUNDANT, and recorded as such so it is not re-derived as a test gap:
@@ -167,18 +171,34 @@ function checkExcludedAgents(mod) {
   if (parsed.absent) return [];
   const configPath = path.join(mod.dir, 'config.yaml');
 
+  // T266 precedence. NOT READ first: in a module the install never reads, the shape is moot, and
+  // fixing it would only lead to a second finding saying the list has no effect. Then the SHAPE,
+  // because fixing it is what lets the operator see the rest; then an UNKNOWN id. NOT READ and
+  // MALFORMED can both hold — a bad shape in an unread module — so the `||` order below is what
+  // picks one; MALFORMED and UNKNOWN cannot. PENDING is not a fourth class in that chain: it is
+  // APPENDED to whichever finding shows, so a pending id is never hidden behind a typo or a bad shape.
+  // An empty list says nothing; a malformed one holds something, even with no usable id in it.
+  const notRead = !parsed.read && (parsed.ids.length > 0 || !parsed.conforming)
+    ? notReadExclusionMessage(mod.name, parsed.ids, configPath, ownerListsIn(modules, projectRoot))
+    : null;
+  // "applied beyond" names the ids the install acts on — never a pending one, nor one that matches
+  // nothing. An operator's own agent counts: the install does drop it from `agents:`, and the
+  // install-path warning names it too, so the two say the same.
   const malformed = !parsed.conforming
-    ? malformedExclusionMessage(mod.config.excluded_agents, parsed.ids, configPath)
+    ? malformedExclusionMessage(mod.config.excluded_agents, [...parsed.applied, ...parsed.own], configPath)
     : null;
   const unknown = parsed.conforming
     ? unknownExclusionMessage(parsed.ids, parsed.conforming, profileFor(mod.name), configPath, mod.config.agents)
     : null;
-  // `||`, and the two are MUTUALLY EXCLUSIVE by construction: `malformed` requires
-  // `!conforming` and `unknown` requires `conforming`. So a mutant that concatenates both survives
-  // mutation — it is an equivalent mutant, not a missing test. Recorded so the next reader does not
-  // spend a round proving it. What the `||` does express is the precedence if that ever changes:
-  // the SHAPE first, because fixing it is what lets the operator see the second problem at all.
-  const message = malformed || unknown;
+  const unique = [...new Set(parsed.pending)];
+  const pending = unique.length > 0
+    ? `${shownIds(unique)} ${unique.length === 1 ? 'is' : 'are'} opted out in ${configPath} but still installed. `
+      + 'An opt-out is applied by a refresh, an upgrade or an install — not by a plain update of an '
+      + 'installation that is already current.\n'
+      + refreshFix('applies it')
+    : null;
+  const primary = notRead || malformed || unknown;
+  const message = primary && pending ? `${primary}\n${pending}` : primary || pending;
   if (!message) return [];
 
   // The message already names the file, the field, what was found and what to do, so the finding
@@ -196,11 +216,64 @@ function checkExcludedAgents(mod) {
     // nothing" is the claim the ruling retracted. Softening the `fix` body and leaving the headline
     // is worse than not softening at all: the two lines print one under the other, in opposite
     // voices.
-    warning: malformed
-      ? 'the opt-out list is not a list of agent ids, so it did not take effect'
-      : 'the opt-out list names an agent this module does not know about',
+    warning: notRead ? 'Convoke does not read this opt-out list, so it has no effect'
+      : malformed ? 'the opt-out list is not a list of agent ids, so it did not take effect'
+        : unknown ? 'the opt-out list names an agent this module does not know about'
+          : 'the opt-out list names an agent that is still installed',
     fix: message,
   }];
+}
+
+/** Ids for a message: quoted, so an empty one shows, and capped as the other exclusion messages are. */
+function shownIds(ids) {
+  const q = ids.map((id) => JSON.stringify(id));
+  return q.length > 8 ? `${q.slice(0, 8).join(', ')} and ${q.length - 8} more` : q.join(', ');
+}
+
+/**
+ * T266. The list in a module the install never reads — none of those Convoke ships has agents. An
+ * opt-out works only in the config of the module the agent belongs to, so name that file.
+ */
+function notReadExclusionMessage(moduleName, ids, configPath, ownerLists = () => null) {
+  const unique = [...new Set(ids)];
+  // Where each id belongs, and what that module's own list already says, so the advice is never to
+  // do what is already done (Round 2: "is not opted out" printed beside "1 excluded" for one id).
+  const moves = unique
+    .map((id) => [id, exclusionOwner(id)])
+    .filter(([, owner]) => owner)
+    .map(([id, owner]) => {
+      const listed = ownerLists(owner, id);
+      if (listed === null) return `\n${JSON.stringify(id)} is ${owner}'s agent, and ${owner} is not installed here.`;
+      if (listed) return `\n${JSON.stringify(id)} is already listed in _bmad/bme/${owner}/config.yaml, where it applies; this entry does nothing and can be deleted.`;
+      return `\nTo opt out of ${JSON.stringify(id)}, list it in _bmad/bme/${owner}/config.yaml instead.`;
+    });
+  const what = unique.length === 0 ? 'it opts nothing out'
+    : `${shownIds(unique)} ${unique.length === 1 ? 'is' : 'are'} not opted out`;
+  return `${configPath}: \`excluded_agents\` is not read for ${moduleName}, so ${what}. `
+    + 'Convoke reads an opt-out only in the config of the module the agent belongs to: '
+    + `${Object.keys(MODULE_PROFILES).join(' or ')}.${moves.join('')}`;
+}
+
+/**
+ * T266. Whether the owning module's own list names an id: true or false, or null when that module is
+ * not installed. Its own parse, so a malformed owner list still counts the ids it holds.
+ */
+function ownerListsIn(modules, projectRoot) {
+  return (owner, id) => {
+    const m = modules.find((x) => x.name === owner);
+    if (!m || !m.config) return null;
+    return classifyExclusions(owner, m.config, wrapperInstalledIn(projectRoot)).ids.includes(id);
+  };
+}
+
+/** The project root a discovered module sits in: `<root>/_bmad/bme/<name>`. */
+function projectRootOf(mod) {
+  return path.resolve(mod.dir, '..', '..', '..');
+}
+
+/** T266: whether a shipped agent's skill wrapper is installed — the install's ground truth. */
+function wrapperInstalledIn(projectRoot) {
+  return (id) => fs.existsSync(path.join(projectRoot, '.claude', 'skills', `bmad-agent-bme-${id}`, 'SKILL.md'));
 }
 
 /**
@@ -321,14 +394,16 @@ function checkModuleAgents(mod) {
   // Reporting the unknown id as a finding is deliberately NOT done here: that is `T249`'s open
   // row, which owns doctor surfacing a wrong `excluded_agents` value, and its scope now covers an
   // unknown id as well as a malformed shape.
-  const parsedExclusions = parseExcludedAgents(mod.config.excluded_agents);
-  // `profileFor`, not `MODULE_PROFILES[mod.name]`: the bare index returns a truthy
-  // `Object.prototype` member for a module named `toString` or `__proto__`, whose `agentIds`
-  // is undefined — and then EVERY exclusion, genuine ones included, vanishes from the report.
-  const moduleProfile = profileFor(mod.name);
-  const excluded = moduleProfile
-    ? partitionExclusions(parsedExclusions.ids, moduleProfile.agentIds).known
-    : parsedExclusions.ids;
+  //
+  // T266: `classifyExclusions`, the one definition every reader here shares. An excluded shipped
+  // agent is not required to be present either way — the operator has opted it out. `applied`
+  // (wrapper gone) is reported as excluded; `pending` (wrapper still installed) is noted, and counted
+  // as present when its file is there; `checkExcludedAgents` says what will finish it.
+  // An operator's own agent (`own`) is an ordinary agent here: excluding it is counted nowhere.
+  const exclusions = classifyExclusions(mod.name, mod.config, wrapperInstalledIn(projectRootOf(mod)));
+  const excluded = exclusions.applied;
+  const optedOut = [...exclusions.applied, ...exclusions.pending];
+  const expected = agentIds.filter((id) => !optedOut.includes(id));
 
   if (!fs.existsSync(agentsDir)) {
     return {
@@ -346,7 +421,7 @@ function checkModuleAgents(mod) {
   const leafFor = (id) => isVortexSkillDir ? path.join(id, 'SKILL.md') : `${id}.md`;
   const leafDisplayFor = (id) => isVortexSkillDir ? `${id}/SKILL.md` : `${id}.md`;
 
-  const missing = agentIds.filter(id => !fs.existsSync(path.join(agentsDir, leafFor(id))));
+  const missing = expected.filter(id => !fs.existsSync(path.join(agentsDir, leafFor(id))));
 
   if (missing.length > 0) {
     return {
@@ -358,7 +433,7 @@ function checkModuleAgents(mod) {
   }
 
   // Check files are non-empty
-  const empty = agentIds.filter(id => {
+  const empty = expected.filter(id => {
     const stat = fs.statSync(path.join(agentsDir, leafFor(id)));
     return stat.size === 0;
   });
@@ -372,10 +447,12 @@ function checkModuleAgents(mod) {
     };
   }
 
-  let info = `${agentIds.length} agents present`;
-  if (excluded.length > 0) {
-    info += ` (${excluded.length} excluded: ${excluded.join(', ')})`;
-  }
+  const pendingPresent = exclusions.pending.filter((id) => fs.existsSync(path.join(agentsDir, leafFor(id))));
+  const notes = [];
+  if (excluded.length > 0) notes.push(`${excluded.length} excluded: ${excluded.join(', ')}`);
+  if (exclusions.pending.length > 0) notes.push(`${exclusions.pending.length} opt-out pending: ${exclusions.pending.join(', ')}`);
+  let info = `${expected.length + pendingPresent.length} agents present`;
+  if (notes.length > 0) info += ` (${notes.join('; ')})`;
   return { name: label, passed: true, info };
 }
 
@@ -660,25 +737,22 @@ function checkAgentSkillWrappers(projectRoot, modules = []) {
   const label = 'BME agent skill wrappers';
   // U8: gather excluded agent IDs across all discovered modules so their wrappers
   // don't get flagged as missing (they are intentionally absent).
+  // T266: per module, through `classifyExclusions`. One set aggregated across modules let a list
+  // the install never reads (`_enhance`'s) suppress `_gyre`'s wrapper check. Only APPLIED ids are
+  // excluded: their wrapper is gone, as intended. A pending one is still installed, so it is checked.
   const excludedIds = new Set();
+  const installed = wrapperInstalledIn(projectRoot);
   for (const mod of modules) {
     if (mod.config) {
-      // Same authority as the install path (T244), silent here by design. T250 R2: an id this
-      // module has no agent for is NOT an exclusion, so it must not inflate the excluded count
-      // in the info line below — it previously did, against a roster that could not support it.
-      const parsed = parseExcludedAgents(mod.config.excluded_agents);
-      const prof = profileFor(mod.name);
-      const real = prof ? partitionExclusions(parsed.ids, prof.agentIds).known : parsed.ids;
-      for (const id of real) excludedIds.add(id);
+      for (const id of classifyExclusions(mod.name, mod.config, installed).applied) excludedIds.add(id);
     }
   }
 
   // EXTRA_BME_AGENTS was spread here until tfu-1-1. Spreading a deleted export would have thrown
   // at startup — the doctor dying before it can diagnose anything — which is why the roster and
   // every consumer moved in one change rather than the export alone (AC#0 option (b), rejected).
-  const allAgents = [...AGENTS, ...GYRE_AGENTS].filter(
-    a => !excludedIds.has(a.id)
-  );
+  // `applied` holds shipped agents only, so the set's size is the count of wrappers excluded.
+  const allAgents = [...AGENTS, ...GYRE_AGENTS].filter(a => !excludedIds.has(a.id));
   const failures = [];
 
   for (const agent of allAgents) {

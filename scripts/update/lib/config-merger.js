@@ -69,7 +69,8 @@ const MODULE_PROFILES = Object.freeze({
  * independently written sentences about the same defect is how a fix and the report of it drift.
  *
  * @param {*} value - The raw value, for its shape.
- * @param {string[]} ids - The usable ids `parseExcludedAgents` salvaged from it.
+ * @param {string[]} ids - The salvaged ids that APPLY. T266: not every salvaged id — the message
+ *   says the opt-out was applied "beyond" these, so an id that matches no agent must not be named.
  * @param {string} source - The config path.
  * @returns {string}
  */
@@ -178,6 +179,75 @@ function warnOnUnknownExclusions(ids, conforming, profile, source, alsoKnown) {
 }
 
 /**
+ * The other module whose profile owns `id`, or null.
+ *
+ * @param {string} id
+ * @param {object|undefined} profile - The module asking; its own roster is not "other".
+ * @returns {string|null}
+ */
+function exclusionOwner(id, profile) {
+  for (const [name, p] of Object.entries(MODULE_PROFILES)) {
+    if (p !== profile && p.agentIds.includes(id)) return name;
+  }
+  return null;
+}
+
+/**
+ * The ids a module's `excluded_agents` can exclude: its shipped agents, plus the operator's own
+ * agents in its `agents:` that no other module owns. The rulings behind the second half are at
+ * `unknownExclusionMessage`. T266: one definition, so the readers cannot split on it again.
+ *
+ * @param {object} profile
+ * @param {string[]|undefined} alsoKnown - The module's `agents:`.
+ * @returns {string[]}
+ */
+function exclusionRoster(profile, alsoKnown) {
+  const widening = (Array.isArray(alsoKnown) ? alsoKnown : []).filter((id) => exclusionOwner(id, profile) === null);
+  return [...(profile.agentIds || []), ...widening];
+}
+
+/**
+ * T266. What the install does with one module's `excluded_agents`, for the readers that report it.
+ *
+ * The install reads the field for the modules with a profile only. For a SHIPPED agent of that
+ * module it acts by not generating the agent's skill wrapper, and a refresh removes one already
+ * there — so the wrapper is the ground truth (operator ruling D1, 2026-11-02): excluded with its
+ * wrapper present is PENDING, still installed; with it absent, APPLIED, whatever `agents:` says. A
+ * plain update of a current installation refreshes nothing, so pending lasts until a refresh or an
+ * upgrade. Rulings 2026-11-01: a module without a profile is reported as not read; a pending id is
+ * counted as excluded nowhere and is reported with the refresh that applies it.
+ *
+ * An operator's OWN agent (in `agents:`, owned by no profile) has no wrapper, and the install only
+ * drops it from `agents:` — after which no reader can tell it from a typo (`T268`). So it is
+ * `own`: known, but neither pending nor applied, and counted nowhere (ruling D2, 2026-11-02).
+ *
+ * @param {string} moduleName
+ * @param {object} config - The module's parsed config.
+ * @param {(id: string) => boolean} [wrapperInstalled] - Whether a shipped agent's skill wrapper is
+ *   installed. Omitted, none is, so every known shipped id counts as applied.
+ * @returns {{read: boolean, ids: string[], conforming: boolean, absent: boolean,
+ *   applied: string[], pending: string[], own: string[], unknown: string[]}} Lists deduplicated.
+ */
+function classifyExclusions(moduleName, config, wrapperInstalled = () => false) {
+  const parsed = parseExcludedAgents(config ? config.excluded_agents : undefined);
+  const profile = profileFor(moduleName);
+  const none = { applied: [], pending: [], own: [], unknown: [] };
+  if (!profile) return { ...parsed, read: false, ...none };
+  const agents = config && Array.isArray(config.agents) ? config.agents : [];
+  const { known, unknown } = partitionExclusions(parsed.ids, exclusionRoster(profile, agents));
+  const uniqueKnown = [...new Set(known)];
+  const shipped = uniqueKnown.filter((id) => profile.agentIds.includes(id));
+  return {
+    ...parsed,
+    read: true,
+    applied: shipped.filter((id) => !wrapperInstalled(id)),
+    pending: shipped.filter((id) => wrapperInstalled(id)),
+    own: uniqueKnown.filter((id) => !profile.agentIds.includes(id)),
+    unknown,
+  };
+}
+
+/**
  * The text describing a CONFORMING `excluded_agents` list that names ids the module has no agent
  * for — or `null` when there is nothing to say.
  *
@@ -206,12 +276,7 @@ function unknownExclusionMessage(ids, conforming, profile, source, alsoKnown) {
   // is why the sentence below no longer asserts that nothing was excluded.
   // Where an unknown id DOES belong, if anywhere. Hoisted above the roster because the widening
   // depends on it: see the ruling below.
-  const ownerOf = (id) => {
-    for (const [name, p] of Object.entries(MODULE_PROFILES)) {
-      if (p !== profile && p.agentIds.includes(id)) return name;
-    }
-    return null;
-  };
+  const ownerOf = (id) => exclusionOwner(id, profile);
   // THE ROSTER, and the reason it is not simply profile + alsoKnown. Operator ruling 2026-10-08,
   // resolving a collision between two earlier ones: T250 R2 ruled that an id belonging to the
   // OTHER module counts as unknown, and the 2026-10-07 widening ruled that the module's own
@@ -223,8 +288,8 @@ function unknownExclusionMessage(ids, conforming, profile, source, alsoKnown) {
   // So `alsoKnown` contributes an id only when NO other module owns it. A user-added agent belongs
   // to no profile and still widens; a real agent of another module does not, and is still reported
   // with the owner named. Both rulings hold.
-  const widening = (Array.isArray(alsoKnown) ? alsoKnown : []).filter((id) => ownerOf(id) === null);
-  const roster = [...(profile.agentIds || []), ...widening];
+  // The roster itself is `exclusionRoster`, which `classifyExclusions` shares (T266).
+  const roster = exclusionRoster(profile, alsoKnown);
   // One definition of "unknown", shared with the callers that ACT on the split rather than only
   // reporting it. Deduplicated there: a repeated id is benign and repeating it is noise.
   const { unknown } = partitionExclusions(ids, roster);
@@ -252,7 +317,7 @@ function unknownExclusionMessage(ids, conforming, profile, source, alsoKnown) {
     + `${unknown.length === 1 ? 'an id that matches' : 'ids that match'} `
     + `no agent this module knows about — ${shown}. Check the spelling; `
     + `${unknown.length === 1 ? 'it' : 'they'} will have no effect if the agent does not exist, and `
-    + 'any other id in the list still applies. '
+    + 'any other id in the list is unaffected by it. '
     + `This module's own agent ids are: ${profile.agentIds.join(', ')}.`;
 }
 
@@ -271,6 +336,8 @@ function unknownExclusionMessage(ids, conforming, profile, source, alsoKnown) {
  * @param {unknown} value - the raw `excluded_agents` field, or undefined when absent
  * @param {object} [options]
  * @param {string} [options.source] - path named in the warning; omit to stay silent
+ * @param {object} [options.profile] - the module's profile, so the warning names only ids that apply
+ * @param {string[]} [options.alsoKnown] - the module's own `agents:`, which widens that roster
  * @returns {{ids: string[], conforming: boolean, absent: boolean}}
  */
 function parseExcludedAgents(value, options = {}) {
@@ -281,7 +348,14 @@ function parseExcludedAgents(value, options = {}) {
   const ids = isList ? value.filter((a) => typeof a === 'string') : [];
   const conforming = isList && ids.length === value.length;
 
-  if (!conforming && source) warnOnce(malformedExclusionMessage(value, ids, source));
+  if (!conforming && source) {
+    // T266: with a roster in hand, name only the ids that apply. Without one, every salvaged id is
+    // named, since this reader cannot tell which match an agent.
+    const applying = options.profile
+      ? partitionExclusions(ids, exclusionRoster(options.profile, options.alsoKnown)).known
+      : ids;
+    warnOnce(malformedExclusionMessage(value, applying, source));
+  }
   return { ids, conforming, absent: false };
 }
 
@@ -337,7 +411,8 @@ function readExcludedAgents(configPath, options = {}) {
     // real agent id being accepted silently, which is `T250`.
     const parsed = yaml.load(content);
     if (parsed && typeof parsed === 'object') {
-      const r = parseExcludedAgents(parsed.excluded_agents, { source: configPath });
+      const r = parseExcludedAgents(parsed.excluded_agents,
+        { source: configPath, profile: options.profile, alsoKnown: parsed.agents });
       // T250 R2: this reader is how `refreshInstallation`, `validator` and the manifest generator
       // learn the exclusions, and all three APPLY them. A caller that knows the module's roster
       // passes it, and then an unknown id is reported here too rather than only on the merge path.
@@ -508,7 +583,8 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}, options 
   // list are filtered out of the active `agents` array so deliberate removals survive upgrades.
   // Re-inclusion works by removing the agent from `excluded_agents` — the next merge restores
   // it via the canonical spread above.
-  const exclusions = parseExcludedAgents(current.excluded_agents, { source: currentConfigPath });
+  const exclusions = parseExcludedAgents(current.excluded_agents,
+    { source: currentConfigPath, profile, alsoKnown: current.agents });
   const excludedAgents = exclusions.ids;
   warnOnUnknownExclusions(excludedAgents, exclusions.conforming, profile, currentConfigPath, current.agents);
   if (updates.agents) {
@@ -825,6 +901,8 @@ function addMigrationHistory(config, fromVersion, toVersion, migrationsApplied) 
 module.exports = {
   CONFIG_SCHEMA,
   MODULE_PROFILES,
+  classifyExclusions,
+  exclusionOwner,
   assertConfigReadable,
   mergeConfig,
   readExcludedAgents,

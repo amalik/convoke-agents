@@ -256,6 +256,13 @@ are easy to trip over:
   every id it can read, and warns that it did not apply the whole list — the entries it rejected
   are not named. Either way your value is kept rather than replaced
   with an empty list — though a list may be re-indented and comments on it are not preserved.
+- An opt-out is applied by the next **refresh, upgrade or install** — a plain `convoke-update` on
+  an installation that is already current changes nothing — and only in the config of the module the
+  agent belongs to: `_vortex` or `_gyre`. Until then the agent and its skill wrapper are still
+  installed, and `convoke-doctor` reports it as not yet applied (`convoke-update --refresh` applies
+  it). An agent you added yourself has no wrapper; excluding it only drops it from `agents:`. A list
+  in any other module's config — `_enhance`, `_artifacts`, `_portability` — is not read at all,
+  and `convoke-doctor` says so and names the config it belongs in.
 - A `description` or `output_folder` you set to the **other** module's exact default value is read
   as the `BUG-22` corruption and reset to this module's own, printing
   `Repaired <field> in <path>: it held the <other module> default` — on stderr, so it is missing

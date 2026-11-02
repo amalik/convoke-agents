@@ -35,7 +35,8 @@ function mod(name, excluded, agents) {
   // alone — but review found that NO fixture anywhere set it, so doctor's `mod.config.agents`
   // argument was inert and deleting it survived the whole suite.
   if (agents !== undefined) config.agents = agents;
-  return { name, dir: path.join('/tmp/proj/_bmad/bme', name), config };
+  // A root that cannot exist: since T266 the check looks for installed skill wrappers under it.
+  return { name, dir: path.join('/nonexistent-convoke-t266/proj/_bmad/bme', name), config };
 }
 
 describe('T249 — doctor reports a wrong excluded_agents value', () => {
@@ -115,13 +116,22 @@ describe('T249 — doctor reports a wrong excluded_agents value', () => {
       'not both descriptions of one field');
   });
 
-  it('is SILENT about an unknown id for a module with no roster, and still reports a malformed one', () => {
-    // T266's boundary, stated as behaviour: `MODULE_PROFILES` has two entries while doctor
-    // discovers six modules. Without a roster an unknown id cannot be identified, so this check
-    // does not guess — but the malformed class needs no roster and is still reported.
-    assert.deepEqual(checkExcludedAgents(mod('_enhance', ['anything-at-all'])), [],
-      'no roster means no basis for calling an id unknown');
-    const [finding] = checkExcludedAgents(mod('_enhance', 'a-bare-scalar'));
+  it('reports a module with no roster as NOT READ, and still reports a malformed one first', () => {
+    // T266, operator ruling 2026-11-01: the install never reads `excluded_agents` for a module
+    // without a profile, so its list has no effect whatever it holds — that is what is reported,
+    // rather than calling any id unknown.
+    const [notRead] = checkExcludedAgents(mod('_enhance', ['anything-at-all']));
+    assert.ok(notRead, 'an opt-out the install never reads must be reported');
+    assert.match(notRead.fix, /is not read for _enhance/);
+    assert.doesNotMatch(notRead.fix, /no agent this module knows about/, 'not the unknown-id class');
+    assert.deepEqual(checkExcludedAgents(mod('_enhance', [])), [], 'an empty list says nothing');
+    // T266 R1: the shape is moot in a module that is never read, so NOT READ is reported first.
+    const [shape] = checkExcludedAgents(mod('_enhance', 'a-bare-scalar'));
+    assert.match(shape.fix, /is not read for _enhance/);
+  });
+
+  it('still reports the MALFORMED class first in a module that is read', () => {
+    const [finding] = checkExcludedAgents(mod('_gyre', 'a-bare-scalar'));
     assert.ok(finding, 'the malformed class is roster-free and must still fire');
     assert.match(finding.fix, /must be a YAML list of agent ids/);
   });
@@ -129,7 +139,7 @@ describe('T249 — doctor reports a wrong excluded_agents value', () => {
   it('carries the AUTHORITY\'s text, not a paraphrase of it', () => {
     // The anti-drift property. If doctor ever composes its own wording, these diverge silently and
     // the operator gets two different descriptions of one defect from two tools.
-    const configPath = path.join('/tmp/proj/_bmad/bme/_gyre', 'config.yaml');
+    const configPath = path.join('/nonexistent-convoke-t266/proj/_bmad/bme/_gyre', 'config.yaml');
 
     const malformedValue = ['review-coach', 42];
     const mParsed = parseExcludedAgents(malformedValue);
@@ -148,9 +158,11 @@ describe('T249 — doctor reports a wrong excluded_agents value', () => {
     );
   });
 
-  it('passes the module\'s own agents list, so a user-added agent is not reported', () => {
+  it('passes the module\'s own agents list, so a user-added agent is not reported unknown', () => {
     // The third call site of the widening, and the one with no coverage at all: dropping
     // `mod.config.agents` from doctor's call survived every test in this file.
+    // T266 ruling D2 (2026-11-02): an operator's own agent has no wrapper, so it is neither pending
+    // nor applied — nothing is reported for it while it is in `agents:`.
     const USER_ADDED = 'my-custom-agent';
     assert.deepEqual(
       checkExcludedAgents(mod('_gyre', [USER_ADDED], ['review-coach', USER_ADDED])), [],

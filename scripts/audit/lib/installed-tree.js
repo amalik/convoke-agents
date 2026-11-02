@@ -109,7 +109,7 @@ const RUNTIME_DATA_FILES = [
   },
   {
     file: '_bmad/_config/agent-manifest.csv',
-    readSite: 'scripts/update/lib/validator.js:289',
+    readSite: 'scripts/update/lib/validator.js:291',
     alsoRead: ['scripts/portability/export-engine.js:168'],
     // `:308` is `fs.writeFile(manifestPath, …)` — the write itself. The first draft cited
     // `:237`, which only DECLARES the destination path; deleting the write and leaving the

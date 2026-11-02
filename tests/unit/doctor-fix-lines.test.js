@@ -140,6 +140,17 @@ const FIX_LINES = [
     breakIt: (d) => fs.removeSync(path.join(d, '_bmad-output/private/.gitignore')),
   },
   {
+    // T266: an opt-out written but not yet applied.
+    source: "refreshFix('applies it')",
+    name: '_gyre excluded_agents', command: 'convoke-update --refresh', passes: '_gyre agents',
+    breakIt: (d) => {
+      const file = path.join(d, '_bmad/bme/_gyre/config.yaml');
+      const text = fs.readFileSync(file, 'utf8');
+      assert.match(text, /^excluded_agents: \[\]$/m, 'fixture: the shipped config has an empty opt-out list');
+      fs.writeFileSync(file, text.replace(/^excluded_agents: \[\]$/m, 'excluded_agents:\n  - review-coach'));
+    },
+  },
+  {
     source: '${packageVersion} convoke-update`',
     name: 'Version consistency', command: 'convoke-update', passes: 'Version consistency',
     breakIt: (d) => setModuleVersion(d, '_enhance', olderVersion()),

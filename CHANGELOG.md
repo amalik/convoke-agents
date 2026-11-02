@@ -67,6 +67,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`convoke-doctor` reports an agent opt-out as applied only when it is (`T266`).** An `excluded_agents` entry
+  is applied by the next refresh, upgrade or install — not by `convoke-update` on an installation that is
+  already current — and only in `_vortex` or `_gyre`. The doctor counted it as soon as it was written, while the agent
+  and its skill wrapper were still installed, and it counted entries in configs the installer never reads, such
+  as `_enhance`'s, which could hide another module's missing wrapper. It now goes by the wrapper: an opted-out
+  agent whose wrapper is still there is counted as present and reported as not yet applied, with
+  `convoke-update --refresh` to apply it, even when the same list also has a typo or a bad shape. A list the
+  installer never reads is reported as having no effect, with where the opt-out belongs, or that it is already
+  there. One run no longer credits an exclusion in one line and denies it in another. A malformed list is no
+  longer said to have been applied "beyond" an id that matches no agent, in the doctor or in any installer
+  warning, and the doctor does not name one that is still installed.
+
 - **Four `convoke-doctor` fixes no longer send you round in circles (`T263`).** A missing skill wrapper, or a
   missing taxonomy file, told you to run `convoke-update`, which says "Already up to date!" and changes nothing
   when you are current. They now name `convoke-update --refresh`, a new flag that re-installs Convoke's files
