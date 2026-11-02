@@ -605,8 +605,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           # Parity with the publish job's toolchain, so the two callers of
           # downgrade-guard.sh are not on divergent shells/coreutils.
