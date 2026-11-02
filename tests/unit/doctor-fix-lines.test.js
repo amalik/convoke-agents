@@ -266,7 +266,9 @@ describe('T263: the coverage table holds every fix line that offers a command', 
   it('every row has a behavioural test, a named test that exists, or a stated reason it has none', () => {
     for (const r of FIX_LINES) {
       if (r.testedBy) {
-        assert.ok(self.includes(`it('${r.testedBy.replace(/'/g, "\\'")}'`), `no test named "${r.testedBy}"`);
+        // Backslashes first, then quotes, as the source literal would hold them (code-scanning #35).
+        const literal = r.testedBy.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        assert.ok(self.includes(`it('${literal}'`), `no test named "${r.testedBy}"`);
       } else {
         assert.ok(r.exempt || (r.name && r.command && r.breakIt), `incomplete coverage row: ${r.source}`);
       }

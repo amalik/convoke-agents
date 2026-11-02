@@ -71,7 +71,9 @@ describe('T221: a refresh keeps what the operator added to the three copied modu
       assert.match(after, /^# why I set this\nmy_setting: keep-me$/m, `${m}: the added key or its comment was lost`);
       assert.match(after, /^my_list:\n {2}- a\n {2}- b$/m, `${m}: the added list was lost`);
       assert.ok(!after.includes('operator edit'), `${m}: an edit to a package key must be reset`);
-      assert.match(after, new RegExp(`^version: ${getPackageVersion().replace(/\./g, '\\.')}$`, 'm'), `${m}: not stamped`);
+      // Every regex metacharacter, not only `.` (code-scanning #34).
+      const version = getPackageVersion().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      assert.match(after, new RegExp(`^version: ${version}$`, 'm'), `${m}: not stamped`);
       assert.ok(changes.includes(`Kept your keys in _bmad/bme/${m}/config.yaml: my_setting, my_list`),
         `${m}: the run must say which keys it kept`);
     }
