@@ -4,7 +4,7 @@ baseline_commit: 813e4e3f
 
 # Story cir-1.3: Make a skill that arrives alone say so
 
-Status: review
+Status: done
 
 **Epic:** [cir — Channel-Integrity Remediation](../planning-artifacts/convoke-epic-channel-integrity-remediation.md)
 **Ruling:** [ADR-001 — the distribution unit](../planning-artifacts/adr/channel-integrity/adr-001-the-distribution-unit.md), **Amendment 1** (2026-09-27) — **A1.1** both channels are non-reference and disclaimed, **A1.3** the disclaimer is a flat notice plus a pointer, **A1.5** four descriptions are too short to match on.

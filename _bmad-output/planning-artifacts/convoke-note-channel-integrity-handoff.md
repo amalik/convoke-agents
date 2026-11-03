@@ -76,7 +76,7 @@ mechanism holding it together is that the pieces arrive together.
 |---|---|
 | `cir-1-1` | **done.** Residue `IN-240` (8 holes, 2 rulings). |
 | `cir-1-2` | **closed unimplemented** — a duplicate of `T183`. Its fix was also wrong; do not copy it. Kept for the review inside it. |
-| `cir-1-3` | **SHIPPED 2026-10-10** (`8f15aa1d`) + Round 1 fixes (`c8d7594d`); status `review`. The notice is in all 7 frontmatter `description`s and a `## Maturity and limits` pointer in each body. **It is correct in the files and currently reaches no pre-install surface on either channel** — see A4.6/A4.7. Residue: `IN-253` (two AC7 checks weaker than claimed). |
+| `cir-1-3` | **SHIPPED 2026-10-10** (`8f15aa1d`) + Round 1 fixes (`c8d7594d`); status `done` (operator ruling 2026-11-03). The notice is in all 7 frontmatter `description`s and a `## Maturity and limits` pointer in each body. **It is correct in the files and currently reaches no pre-install surface on either channel** — see A4.6/A4.7. Residue: `IN-253` (two AC7 checks weaker than claimed). |
 | `s4-1-1` | **deferred, re-affirmed 2026-10-14 on evidence (A5.2).** Its revival condition — *evidence about what breaks for a real operator arriving through a channel* — **is met**, and the evidence argues against the remedy: the defect is skills.sh-shaped, does not exist on the Claude Code path, and a hub would reach that catalogue only once somebody installed the hub. **C10 and C11 stand.** The banner now states what would change the ruling. |
 | `s4-1-2` | not authored. Blocked on `validate-marketplace.js`'s `AGENT_IDS` identity check. |
 

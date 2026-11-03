@@ -1,6 +1,6 @@
 # Story 2.1: Retrofit T1-Firing Cells (Vortex × Right to pacing)
 
-Status: review — **implemented 2026-09-03; Rounds 1, 2 and 3 run (2026-09-04). Round 3 was the last allowed round; its residue is filed as T121-T123 and in `deferred-work.md`, not fixed here.** Unblocked 2026-08-28 when T88 shipped. AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
+Status: done (operator ruling 2026-11-03; 2.3 stays blocked by T86) — **implemented 2026-09-03; Rounds 1, 2 and 3 run (2026-09-04). Round 3 was the last allowed round; its residue is filed as T121-T123 and in `deferred-work.md`, not fixed here.** Unblocked 2026-08-28 when T88 shipped. AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

@@ -4,7 +4,7 @@ baseline_commit: a907f24ee78a41fa53fa49edef3c0f0740a9c13b
 
 # Story sp-7.2: Pin the third vocabulary copy and end the VALID_TIERS collision
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

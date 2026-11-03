@@ -471,7 +471,7 @@ development_status:
   # (pre-install notice + post-install ledger pointer) and absorbs the original defect-1 runtime
   # detection. Folds in A1.5's four short descriptions. Scope is the 7 declared manifest paths;
   # Gyre's four cannot be declared at all and are filed as IN-248.
-  cir-1-3-make-a-skill-that-arrives-alone-say-so: review
+  cir-1-3-make-a-skill-that-arrives-alone-say-so: done
   cir-epic-1-retrospective: optional
 
   # s4 — build the ruled option: one deliberate plugin and a hub that bootstraps the runtime.
@@ -639,7 +639,7 @@ development_status:
   # were refuted against dist-2-8 — see the spec's .memlog.md before adding stories here.
   sp-epic-7: in-progress
   sp-7-1-fold-the-schema-lint-into-the-audit: review
-  sp-7-2-pin-the-third-vocabulary-copy: review
+  sp-7-2-pin-the-third-vocabulary-copy: done
 
   # ============================================================
   # CONVOKE OPERATOR COVENANT (P21)
@@ -661,8 +661,10 @@ development_status:
   # Epic 2: Adopt and Publish the Convoke Operator Covenant (deferred)
   # Story 2.2 blocked by Phase 3 Loom Add Skill workflow existing
   # Story 2.3 gated by Story 2.1 retrofit of bottleneck rights (Publication Gate)
+  # 2.1 is done (operator ruling 2026-11-03), but 2.3 is NOT thereby unblocked: T86 records that
+  # P21's publication gate turns on a T1 fire from an audit that failed its own reproducibility check.
   oc-epic-2: in-progress
-  oc-2-1-retrofit-bottleneck-skills: review
+  oc-2-1-retrofit-bottleneck-skills: done
   oc-2-2-loom-add-skill-gate: backlog
   oc-2-3-publication-strategy: backlog
   oc-epic-2-retrospective: optional
