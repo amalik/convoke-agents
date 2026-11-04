@@ -60,7 +60,7 @@ npx -p convoke-agents convoke-install-vortex
 # If BMAD Method is already installed, Convoke detects it automatically
 npm install convoke-agents
 npx -p convoke-agents convoke-install-vortex
-# Installer logs: "✓ BMAD Method configuration found"
+# Installer logs: "✓ BMAD Method <version> found", read from _bmad/_config/manifest.yaml
 ```
 
 ### What Gets Installed
@@ -113,7 +113,7 @@ Read the package version from `package.json` rather than from this file:
   `REQUIRED_BMAD_VERSION` in `scripts/update/lib/compat-preflight.js`; the preflight *warns*
   and proceeds, so a lower version does not block installation
 - Creates `_bmad/` directory automatically if missing
-- Optional detection: BMAD Method config (bmad.yaml in _bmad/_config/)
+- Optional detection: BMAD's install record (`_bmad/_config/manifest.yaml`)
 - Teams: Vortex (7 agents), Gyre (4 agents)
 - Skills: Enhance (initiatives-backlog)
 
@@ -125,10 +125,16 @@ Convoke installers check:
    - If missing: Created automatically by the installer
    - Installation proceeds in standalone mode
 
-2. **Optional:** BMAD Method configuration (bmad.yaml in _bmad/_config/)
-   - If found: Logged as detected
-   - If missing: Warning only (installation continues in standalone mode)
-   - Allows for different BMAD Method configurations
+2. **Optional:** the installed BMAD Method version, read by `scripts/update/lib/compat-preflight.js`
+   from BMAD's install record, `_bmad/_config/manifest.yaml` (the `core` module's `version`, else
+   `installation.version`), and from `node_modules/bmad-method/package.json` only if that record gives no
+   usable version (missing, unreadable, not a regular file, oversized, or holding no value that is a version)
+   - At or above `REQUIRED_BMAD_VERSION`: no warning, except a note for a prerelease or build version
+     (`6.3.0-rc.1`), which is compared as `6.3.0`; the installers print `✓ BMAD Method <version> found`
+   - Below it: a warning with the upgrade command (`npx bmad-method@latest install`, or
+     `npm install bmad-method@latest` when the version came from `node_modules`)
+   - Neither source yields a version: a "BMAD core not detected" warning saying what each one held
+   - In every case installation continues; the check never blocks
 
 ---
 

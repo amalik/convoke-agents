@@ -6,7 +6,10 @@ const path = require('path');
 const fs = require('fs-extra');
 
 const { createTempDir } = require('../helpers');
-const { runCompatPreflight, _internal } = require('../../scripts/update/lib/compat-preflight');
+const { execFileSync } = require('child_process');
+const {
+  runCompatPreflight, meetsBmadFloor, REQUIRED_BMAD_VERSION, _internal,
+} = require('../../scripts/update/lib/compat-preflight');
 
 // ─── Fixture helpers ──────────────────────────────────────────────
 
@@ -260,6 +263,294 @@ describe('compat-preflight (Story v63-3-2)', () => {
     } finally {
       await fs.remove(tmpDir);
     }
+  });
+
+});
+
+// ─── BUG-20: BMAD's installer records its version in _bmad/_config/manifest.yaml ──
+//
+// BMAD is installed with `npx bmad-method install`, which never writes
+// node_modules/bmad-method. Reading only node_modules reported "BMAD core not detected" on
+// every project where BMAD IS installed, and the version floor never ran.
+
+/** Write `_bmad/_config/manifest.yaml` with the given raw YAML text. */
+async function seedManifest(tmpDir, yamlText) {
+  const dir = path.join(tmpDir, '_bmad/_config');
+  await fs.ensureDir(dir);
+  await fs.writeFile(path.join(dir, 'manifest.yaml'), yamlText, 'utf8');
+}
+
+/** The shape BMAD 6.x writes: an installation block and a modules list. */
+function manifestYaml({ installation = '6.10.0', core = '6.10.0', extra = '' } = {}) {
+  const lines = ['installation:'];
+  if (installation !== null) lines.push(`  version: ${installation}`);
+  lines.push('  installDate: 2026-02-01T22:14:37.688Z', 'modules:');
+  if (core !== null) lines.push('  - name: core', `    version: ${core}`, '    source: built-in');
+  lines.push('  - name: tea', '    version: v1.21.7', '    source: external');
+  return lines.join('\n') + '\n' + extra;
+}
+
+describe('compat-preflight reads the BMAD install record (BUG-20)', () => {
+
+  it('manifest records core 6.10.0, no node_modules → silent pass', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml());
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, true);
+      assert.equal(result.version, '6.10.0');
+      assert.equal(result.source, 'manifest');
+      assert.equal(result.warning, null);
+      assert.equal(stderr, '', `expected no stderr; got: ${JSON.stringify(stderr)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('manifest records core 6.2.0 → floor WARNING with the installer upgrade command', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: '6.2.0', core: '6.2.0' }));
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, true);
+      assert.equal(result.version, '6.2.0');
+      assert.ok(stderr.includes('BMAD 6.2.0 detected'), `got: ${JSON.stringify(stderr)}`);
+      // A manifest install is upgraded by re-running BMAD's installer, not by npm install.
+      assert.ok(stderr.includes('npx bmad-method@latest install'), `got: ${JSON.stringify(stderr)}`);
+      assert.ok(!stderr.includes('npm install bmad-method'), `got: ${JSON.stringify(stderr)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('the core module version decides, not installation.version', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: '6.10.0', core: '6.2.0' }));
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.version, '6.2.0');
+      assert.ok(result.warning && result.warning.includes('requires'), `got: ${JSON.stringify(result)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('no core module entry → installation.version is used', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: '6.2.0', core: null }));
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, true);
+      assert.equal(result.version, '6.2.0');
+      assert.ok(result.warning && result.warning.includes('requires'), `got: ${JSON.stringify(result)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a `v`-prefixed version, as BMAD writes for external modules, is read as the number', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: null, core: 'v6.2.0' }));
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, true);
+      assert.ok(result.warning && result.warning.includes('requires'), `got: ${JSON.stringify(result)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an unquoted two-part core version is read as written, not as the YAML number 6.1', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      // The default YAML schema loads `6.10` as the number 6.1, below the floor.
+      await seedManifest(tmpDir, manifestYaml({ installation: null, core: '6.10' }));
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, true);
+      assert.equal(result.version, '6.10');
+      assert.equal(stderr, '', `got: ${JSON.stringify(stderr)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an unquoted integer core version is read, not reported as no version', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: null, core: '7' }));
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.version, '7');
+      assert.equal(stderr, '', `got: ${JSON.stringify(stderr)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a core value that is not a version falls through to installation.version', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: '6.10.0', core: 'latest' }));
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, true);
+      assert.equal(result.version, '6.10.0');
+      assert.equal(stderr, '', `got: ${JSON.stringify(stderr)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a manifest with no usable version falls through to node_modules', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: '6.x', core: 'latest' }));
+      await seedBmadPackage(tmpDir, '6.4.0');
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.source, 'package');
+      assert.equal(result.version, '6.4.0');
+      assert.equal(stderr, '', `got: ${JSON.stringify(stderr)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('the unusable values are named when nothing else is found', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: '6.x', core: 'latest' }));
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, false);
+      assert.ok(result.warning.includes('records no usable version'), result.warning);
+      assert.ok(result.warning.includes('"latest"') && result.warning.includes('"6.x"'), result.warning);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  for (const written of ['V6.10.0', ' v 6.10.0 ']) {
+    it(`a core version written ${JSON.stringify(written)} is read as 6.10.0`, async () => {
+      const tmpDir = await createTempDir('bmad-pref-');
+      try {
+        await seedManifest(tmpDir, manifestYaml({ installation: null, core: JSON.stringify(written) }));
+        const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+        assert.equal(result.version, '6.10.0');
+        assert.equal(stderr, '', `got: ${JSON.stringify(stderr)}`);
+      } finally {
+        await fs.remove(tmpDir);
+      }
+    });
+  }
+
+  it('a manifest path that is a directory is refused as not a regular file', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await fs.ensureDir(path.join(tmpDir, '_bmad/_config/manifest.yaml'));
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, false);
+      assert.ok(result.warning.includes('is not a regular file'), result.warning);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  // A named pipe stats at size 0, so the cap does not stop it, and readFileSync on it blocks until a
+  // writer appears — forever, in an install. Run in a child so a regression fails on its timeout.
+  it('a manifest that is a named pipe is refused without reading it', { skip: process.platform === 'win32' }, async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await fs.ensureDir(path.join(tmpDir, '_bmad/_config'));
+      execFileSync('mkfifo', [path.join(tmpDir, '_bmad/_config/manifest.yaml')]);
+      const mod = path.join(__dirname, '../../scripts/update/lib/compat-preflight.js');
+      const out = execFileSync(process.execPath,
+        ['-e', `console.log(JSON.stringify(require(${JSON.stringify(mod)}).detectBmadInstall(${JSON.stringify(tmpDir)})))`],
+        { timeout: 10000, encoding: 'utf8' });
+      const result = JSON.parse(out);
+      assert.equal(result.found, false);
+      assert.ok(result.reason.includes('is not a regular file'), result.reason);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('the manifest wins over node_modules when both exist', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml());
+      await seedBmadPackage(tmpDir, '6.2.0');
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.source, 'manifest');
+      assert.equal(result.version, '6.10.0');
+      assert.equal(stderr, '');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an unparseable manifest falls back to node_modules', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, 'installation: [unclosed\n');
+      await seedBmadPackage(tmpDir, '6.4.0');
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, true);
+      assert.equal(result.source, 'package');
+      assert.equal(stderr, '');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a manifest with no usable version and no package → WARNING naming both sources', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: null, core: null }));
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, false);
+      assert.ok(stderr.includes('BMAD core not detected'), `got: ${JSON.stringify(stderr)}`);
+      assert.ok(stderr.includes('manifest.yaml'), `got: ${JSON.stringify(stderr)}`);
+      assert.ok(stderr.includes('node_modules'), `got: ${JSON.stringify(stderr)}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a manifest exactly at the size cap is not read, and one byte under it is', async () => {
+    const cap = _internal.PKG_JSON_MAX_BYTES;
+    for (const [size, readable] of [[cap, false], [cap - 1, true]]) {
+      const tmpDir = await createTempDir('bmad-pref-');
+      try {
+        const body = manifestYaml();
+        await seedManifest(tmpDir, body + '#'.repeat(size - Buffer.byteLength(body)));
+        assert.equal(fs.statSync(path.join(tmpDir, '_bmad/_config/manifest.yaml')).size, size);
+        const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+        assert.equal(result.detected, readable, `size ${size}: ${JSON.stringify(result)}`);
+        if (!readable) assert.ok(result.warning.includes('cap'), result.warning);
+      } finally {
+        await fs.remove(tmpDir);
+      }
+    }
+  });
+
+  it('meetsBmadFloor compares against REQUIRED_BMAD_VERSION, suffix dropped', () => {
+    assert.equal(meetsBmadFloor(REQUIRED_BMAD_VERSION), true);
+    assert.equal(meetsBmadFloor('6.10.0'), true);
+    assert.equal(meetsBmadFloor('6.2.9'), false);
+    assert.equal(meetsBmadFloor('6.2.0-rc.1'), false);
+  });
+
+  // project-context.md §preflight-soft-warn, as amended for BUG-20: live smoke against the dev
+  // tree must REPORT what it detects. This repository has BMAD installed and its install
+  // record committed, so the honest output here is silence and the recorded core version.
+  it('live smoke: this repository has BMAD installed, and the preflight says so', () => {
+    const repoRoot = path.join(__dirname, '../..');
+    // Expected value taken from the raw text with a pattern of its own, not by repeating the
+    // module's parse — a test that parses the way production does shares production's mistakes.
+    const raw = fs.readFileSync(path.join(repoRoot, '_bmad/_config/manifest.yaml'), 'utf8');
+    const m = raw.match(/^ {2}- name: core\n {4}version: (\d+\.\d+\.\d+)$/m);
+    assert.ok(m, 'expected a `- name: core` entry with a plain N.N.N version in the committed record');
+    const { result, stderr } = captureStderr(() => runCompatPreflight(repoRoot));
+    assert.equal(result.detected, true, `got: ${JSON.stringify(result)}`);
+    assert.equal(result.version, m[1]);
+    assert.equal(stderr, '', `expected no stderr on a tree with BMAD installed; got: ${JSON.stringify(stderr)}`);
   });
 
 });

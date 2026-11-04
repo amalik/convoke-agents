@@ -4,7 +4,9 @@ const fs = require('fs-extra');
 const path = require('path');
 const { refreshInstallation } = require('./update/lib/refresh-installation');
 const { findProjectRoot } = require('./update/lib/utils');
-const { runCompatPreflight } = require('./update/lib/compat-preflight');
+const {
+  runCompatPreflight, detectBmadInstall, meetsBmadFloor, REQUIRED_BMAD_VERSION,
+} = require('./update/lib/compat-preflight');
 const { AGENTS } = require('./update/lib/agent-registry');
 const { evaluateAgentInstall } = require('./lib/agent-install-checks');
 
@@ -43,10 +45,14 @@ function checkPrerequisites(projectRoot) {
     console.log(`${GREEN}  ✓${RESET} BMAD directory detected`);
   }
 
-  // Check for BMAD Method configuration (optional)
-  const bmadConfigPath = path.join(bmadDir, '_config', 'bmad.yaml');
-  if (fs.existsSync(bmadConfigPath)) {
-    console.log(`${GREEN}  ✓${RESET} BMAD Method configuration found`);
+  // Check for an installed BMAD Method (optional). BMAD records its install in
+  // `_bmad/_config/manifest.yaml`; the `bmad.yaml` read here before BUG-20 is a file BMAD does not write.
+  // Same detection and floor as runCompatPreflight, so this line cannot contradict its warning.
+  const bmad = detectBmadInstall(projectRoot);
+  if (bmad.found && meetsBmadFloor(bmad.version)) {
+    console.log(`${GREEN}  ✓${RESET} BMAD Method ${bmad.version} found`);
+  } else if (bmad.found) {
+    console.log(`${YELLOW}  ⚠${RESET} BMAD Method ${bmad.version} found, below the ${REQUIRED_BMAD_VERSION} Convoke needs (see the warning above)`);
   } else {
     console.log(`${YELLOW}  ⚠${RESET} BMAD Method not detected (Convoke will install standalone)`);
   }

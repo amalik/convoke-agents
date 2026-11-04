@@ -67,6 +67,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`⚠ BMAD core not detected` no longer appears when BMAD is installed (`BUG-20`).** `convoke-install`,
+  `convoke-install-gyre` and `convoke-update` looked for BMAD only in `node_modules/bmad-method`, where
+  BMAD's own installer (`npx bmad-method install`) never puts it — so on a normal BMAD project they said
+  BMAD was missing, and never checked that it was at least 6.3.0. They now read the version BMAD records
+  in `_bmad/_config/manifest.yaml`, and look in `node_modules` only when that record gives no usable
+  version. If your BMAD is older than 6.3.0 you will now see that warning instead, with the command that
+  upgrades it: `npx bmad-method@latest install`. You see "BMAD core not detected" only when neither place
+  yields a version; the warning says what it found in each. The installers' own line had the same fault —
+  it looked for a `_bmad/_config/bmad.yaml` that BMAD does not write, so it printed `⚠ BMAD Method not
+  detected (Convoke will install standalone)` on BMAD projects — and now reports what the preflight found:
+  `✓ BMAD Method <version> found`, or a yellow `found, below the 6.3.0 Convoke needs` for an older one.
+  Nothing is blocked either way; these checks still only warn.
+
 - **`convoke-doctor` reports an agent opt-out as applied only when it is (`T266`).** An `excluded_agents` entry
   is applied by the next refresh, upgrade or install — not by `convoke-update` on an installation that is
   already current — and only in `_vortex` or `_gyre`. The doctor counted it as soon as it was written, while the agent

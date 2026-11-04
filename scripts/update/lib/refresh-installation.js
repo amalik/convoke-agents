@@ -2418,9 +2418,9 @@ function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatim
  * An empty registry claims nothing. A project with no BMM-dependent skills reports
  * `registry consistent — 0 auto-scan + 0 manual rows`, which is accurate. A project that
  * HAS unregistered skills keeps getting `unregistered-custom-skill`, which is also
- * accurate; silencing that was never in BUG-19's scope. (BUG-20 is the separate question of whether
- * an EXPECTED absence — `compat-preflight`'s `BMAD core not detected` — should warn at all; an
- * unregistered custom skill is not that case, and is not in BUG-20's scope.)
+ * accurate; silencing that was never in BUG-19's scope. (BUG-20 was the separate case of
+ * `compat-preflight`'s `BMAD core not detected`, which turned out to be a false report — it read the
+ * wrong file — rather than an expected absence; an unregistered custom skill is neither.)
  *
  * WRITTEN INLINE, AND NOT VIA `_atomicWrite`, FOR A REASON THAT IS NOT STYLE. An earlier
  * revision delegated to `audit-bmm-dependencies.js`'s `_atomicWrite`. Round 2 showed that
