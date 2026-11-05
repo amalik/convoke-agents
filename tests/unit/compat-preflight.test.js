@@ -454,11 +454,16 @@ describe('compat-preflight reads the BMAD install record (BUG-20)', () => {
 
   // A named pipe stats at size 0, so the cap does not stop it, and readFileSync on it blocks until a
   // writer appears — forever, in an install. Run in a child so a regression fails on its timeout.
-  it('a manifest that is a named pipe is refused without reading it', { skip: process.platform === 'win32' }, async () => {
+  it('a manifest that is a named pipe is refused without reading it', { skip: process.platform === 'win32' }, async (t) => {
     const tmpDir = await createTempDir('bmad-pref-');
     try {
       await fs.ensureDir(path.join(tmpDir, '_bmad/_config'));
-      execFileSync('mkfifo', [path.join(tmpDir, '_bmad/_config/manifest.yaml')]);
+      try {
+        execFileSync('mkfifo', [path.join(tmpDir, '_bmad/_config/manifest.yaml')]);
+      } catch (err) {
+        if (err.code === 'ENOENT') { t.skip('no mkfifo on this host'); return; }
+        throw err;
+      }
       const mod = path.join(__dirname, '../../scripts/update/lib/compat-preflight.js');
       const out = execFileSync(process.execPath,
         ['-e', `console.log(JSON.stringify(require(${JSON.stringify(mod)}).detectBmadInstall(${JSON.stringify(tmpDir)})))`],
@@ -535,6 +540,215 @@ describe('compat-preflight reads the BMAD install record (BUG-20)', () => {
     assert.equal(meetsBmadFloor('6.10.0'), true);
     assert.equal(meetsBmadFloor('6.2.9'), false);
     assert.equal(meetsBmadFloor('6.2.0-rc.1'), false);
+    // A prerelease is compared as its release; runCompatPreflight adds the note (R2-H4).
+    assert.equal(meetsBmadFloor('6.3.0-rc.1'), true);
+    // Not a version: fails the floor instead of comparing as 0, or throwing.
+    assert.equal(meetsBmadFloor('6.3.x'), false);
+    assert.equal(meetsBmadFloor(undefined), false);
+    assert.equal(meetsBmadFloor('7.x'), false);
+  });
+
+  // ── BUG-20 Round 2: regressions the first remediation introduced, and what it left open ──
+
+  it('a self-referencing YAML alias as the version is reported, not thrown', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, 'installation:\n  version: &a [*a]\n');
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, false);
+      assert.ok(result.warning.includes('installation a list'), result.warning);
+      assert.ok(stderr.includes('BMAD core not detected'), stderr);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an alias-expansion manifest is answered quickly, without expanding the value', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      const lines = ['a0: &a0 [x, x, x, x, x, x, x, x, x, x]'];
+      for (let i = 1; i < 9; i++) lines.push(`a${i}: &a${i} [${Array(10).fill(`*a${i - 1}`).join(', ')}]`);
+      lines.push('installation:', '  version: *a8');
+      await seedManifest(tmpDir, lines.join('\n') + '\n');
+      const started = Date.now();
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.ok(Date.now() - started < 2000, `took ${Date.now() - started} ms`);
+      assert.equal(result.detected, false);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an explicit tag on an unrelated field does not make the record unreadable', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ extra: 'flags:\n  ok: !!bool true\n  when: !!timestamp 2026-02-01\n  n: !!int 5\n' }));
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.version, '6.10.0', JSON.stringify(result));
+      assert.equal(stderr, '');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a core entry built with a YAML merge key is read', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, 'base: &b\n  name: core\n  version: 6.10\nmodules:\n  - <<: *b\n');
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.version, '6.10', JSON.stringify(result));
+      assert.equal(stderr, '');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  for (const bad of ['6.3.0-', '6-3', '6.3+']) {
+    it(`${JSON.stringify(bad)} is not a version: the next source is read`, async () => {
+      const tmpDir = await createTempDir('bmad-pref-');
+      try {
+        await seedManifest(tmpDir, manifestYaml({ installation: '6.10.0', core: JSON.stringify(bad) }));
+        const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+        assert.equal(result.version, '6.10.0', JSON.stringify(result));
+      } finally {
+        await fs.remove(tmpDir);
+      }
+    });
+  }
+
+  it('a package.json version written `v6.4.0` is read the way the manifest reads it', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedBmadPackage(tmpDir, 'v6.4.0');
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.source, 'package');
+      assert.equal(result.version, '6.4.0');
+      assert.equal(stderr, '');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a long unusable value is quoted shortened, not whole', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: null, core: 'x'.repeat(5000) }));
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.ok(result.warning.length < 500, `warning is ${result.warning.length} characters`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an unexpected error inside detection becomes a warning, never a throw (preflight-soft-warn)', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    const fsx = require('fs-extra');
+    const original = fsx.existsSync;
+    try {
+      fsx.existsSync = () => { throw new Error('synthetic failure'); };
+      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, false);
+      assert.ok(result.warning.includes('detection failed: synthetic failure'), result.warning);
+      assert.ok(stderr.includes('BMAD core not detected'), stderr);
+    } finally {
+      fsx.existsSync = original;
+      await fs.remove(tmpDir);
+    }
+  });
+
+  // BUG-20 Round 3: the cap is enforced on the bytes read, not only on the size fstat reported.
+  it('a record that grows past the cap after it is checked is still refused', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    const fsx = require('fs-extra');
+    const original = fsx.fstatSync;
+    try {
+      await seedManifest(tmpDir, manifestYaml());
+      const file = path.join(tmpDir, '_bmad/_config/manifest.yaml');
+      fsx.fstatSync = (fd, ...rest) => {
+        const st = original.call(fsx, fd, ...rest);
+        fsx.fstatSync = original;
+        require('fs').appendFileSync(file, `#${'x'.repeat(_internal.PKG_JSON_MAX_BYTES + 10)}\n`);
+        return st;
+      };
+      const probe = _internal._readBmadManifest(tmpDir);
+      assert.equal(probe.found, false, `got: ${JSON.stringify(probe).slice(0, 300)}`);
+      assert.ok(probe.reason.includes(`cap ${_internal.PKG_JSON_MAX_BYTES}`), probe.reason);
+    } finally {
+      fsx.fstatSync = original;
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a failure to close the record does not discard the version read from it', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    const fsx = require('fs-extra');
+    const original = fsx.closeSync;
+    try {
+      await seedManifest(tmpDir, manifestYaml());
+      fsx.closeSync = (fd) => { original.call(fsx, fd); throw Object.assign(new Error('EIO close'), { code: 'EIO' }); };
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, true, `got: ${JSON.stringify(result)}`);
+      assert.equal(result.version, '6.10.0');
+    } finally {
+      fsx.closeSync = original;
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an error whose message cannot be read still becomes a warning, never a throw', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    const fsx = require('fs-extra');
+    const original = fsx.existsSync;
+    try {
+      fsx.existsSync = () => { throw { get message() { throw new Error('getter'); } }; };
+      const { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.detected, false);
+      assert.ok(result.warning.includes('detection failed'), result.warning);
+    } finally {
+      fsx.existsSync = original;
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a binary version is described as binary data, not as a map', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedManifest(tmpDir, manifestYaml({ installation: null, core: '!!binary aGVsbG8=' }));
+      const probe = _internal._readBmadManifest(tmpDir);
+      assert.equal(probe.found, false);
+      assert.ok(probe.reason.includes('core binary data'), probe.reason);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a package.json with no version field says the field is missing, not "undefined"', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      await seedBmadPackage(tmpDir, undefined);
+      const probe = _internal._readBmadPackageJson(tmpDir);
+      assert.ok(probe.reason.endsWith('version field invalid: missing'), probe.reason);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('the result says whether an install record was present, so a caller can word "not determined"', async () => {
+    const tmpDir = await createTempDir('bmad-pref-');
+    try {
+      let { result } = captureStderr(() => runCompatPreflight(tmpDir));
+      assert.equal(result.recordPresent, false, 'no record at all');
+      await seedManifest(tmpDir, manifestYaml({ installation: 'latest', core: null }));
+      ({ result } = captureStderr(() => runCompatPreflight(tmpDir)));
+      assert.equal(result.detected, false);
+      assert.equal(result.recordPresent, true, 'a record with no usable version');
+      await fs.remove(path.join(tmpDir, '_bmad'));
+      await seedBmadPackage(tmpDir, '6.x');
+      ({ result } = captureStderr(() => runCompatPreflight(tmpDir)));
+      assert.equal(result.recordPresent, true, 'a package.json with no usable version');
+    } finally {
+      await fs.remove(tmpDir);
+    }
   });
 
   // project-context.md §preflight-soft-warn, as amended for BUG-20: live smoke against the dev
@@ -545,7 +759,7 @@ describe('compat-preflight reads the BMAD install record (BUG-20)', () => {
     // Expected value taken from the raw text with a pattern of its own, not by repeating the
     // module's parse — a test that parses the way production does shares production's mistakes.
     const raw = fs.readFileSync(path.join(repoRoot, '_bmad/_config/manifest.yaml'), 'utf8');
-    const m = raw.match(/^ {2}- name: core\n {4}version: (\d+\.\d+\.\d+)$/m);
+    const m = raw.match(/^ {2}- name: core\r?\n {4}version: (\d+\.\d+\.\d+)\r?$/m);
     assert.ok(m, 'expected a `- name: core` entry with a plain N.N.N version in the committed record');
     const { result, stderr } = captureStderr(() => runCompatPreflight(repoRoot));
     assert.equal(result.detected, true, `got: ${JSON.stringify(result)}`);

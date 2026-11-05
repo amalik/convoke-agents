@@ -128,12 +128,16 @@ Convoke installers check:
 2. **Optional:** the installed BMAD Method version, read by `scripts/update/lib/compat-preflight.js`
    from BMAD's install record, `_bmad/_config/manifest.yaml` (the `core` module's `version`, else
    `installation.version`), and from `node_modules/bmad-method/package.json` only if that record gives no
-   usable version (missing, unreadable, not a regular file, oversized, or holding no value that is a version)
+   usable version (missing, unreadable, not a regular file, oversized, or holding no value that is a version;
+   a `6.10` written without quotes is read as 6.10, not 6.1)
    - At or above `REQUIRED_BMAD_VERSION`: no warning, except a note for a prerelease or build version
-     (`6.3.0-rc.1`), which is compared as `6.3.0`; the installers print `✓ BMAD Method <version> found`
+     (`6.3.0-rc.1`), which is compared as `6.3.0`; the installers print `✓ BMAD Method <version> found` only
+     when the preflight raised nothing, and a yellow `found` line otherwise
    - Below it: a warning with the upgrade command (`npx bmad-method@latest install`, or
      `npm install bmad-method@latest` when the version came from `node_modules`)
-   - Neither source yields a version: a "BMAD core not detected" warning saying what each one held
+   - Neither source yields a version: a "BMAD core not detected" warning saying what each one held;
+     the installers say `BMAD Method not detected` when neither record exists, and `BMAD version not
+     determined` when one exists but holds no readable version
    - In every case installation continues; the check never blocks
 
 ---

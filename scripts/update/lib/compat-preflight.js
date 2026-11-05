@@ -49,37 +49,89 @@ const PKG_JSON_MAX_BYTES = 1_000_000;
 // BMAD's install record, relative to the project root. The same cap applies. Messages name it
 // with forward slashes on every platform; only the filesystem path is built with path.join.
 const BMAD_MANIFEST_REL = '_bmad/_config/manifest.yaml';
-// A version this module can compare: `N`, `N.N` or `N.N.N`, optionally followed by a
-// prerelease (`-rc.1`) or build (`+abc`) suffix, which the floor check strips.
-const VERSION_RE = /^\d+(\.\d+){0,2}([-+].*)?$/;
+// A version this module can compare: `N`, `N.N` or `N.N.N`; a prerelease (`-rc.1`) or build
+// (`+abc`) suffix only after a full `N.N.N`, and never empty. Both readers apply it, so a value that
+// is not a version is "not found" in that source and the next one is read.
+const VERSION_RE = /^\d+(\.\d+){0,2}$|^\d+\.\d+\.\d+[-+][0-9A-Za-z.+-]+$/;
+// Longest value quoted back in a message; the 1 MB cap alone would let a near-1 MB value through.
+const QUOTE_MAX = 60;
 
-/** BMAD writes external module versions as `v1.21.7`; accept `v`/`V`, and stray spaces, for core too. */
+// The manifest is parsed with the default YAML types — so explicit tags (`!!timestamp`), merge keys
+// (`<<: *anchor`) and nulls resolve as usual — except that numbers and dates keep their source text.
+// The default schema reads an unquoted `6.10` as the number 6.1, which is below the floor; a pure
+// FAILSAFE schema avoids that but rejects the whole file at any explicit tag (BUG-20 Round 2).
+// Accepted limit (Round 3): a tag no type here resolves (`!foo`, or `!!int 6.3.0`) still makes the
+// whole file unparseable — the preflight falls back to node_modules and warns. BMAD writes no tags.
+const _asText = (type) => new yaml.Type(type.tag, { kind: 'scalar', resolve: type.resolve, construct: (data) => data });
+const MANIFEST_SCHEMA = yaml.FAILSAFE_SCHEMA.extend({
+  implicit: [yaml.types.null, yaml.types.bool, _asText(yaml.types.int), _asText(yaml.types.float),
+    _asText(yaml.types.timestamp), yaml.types.merge],
+  explicit: [yaml.types.binary, yaml.types.omap, yaml.types.pairs, yaml.types.set],
+});
+
+/** BMAD writes external module versions as `v1.21.7`; accept `v`/`V`, and stray spaces, in both sources. */
 function _normalizeVersion(raw) {
   return typeof raw === 'string' ? raw.trim().replace(/^v\s*/i, '') : '';
 }
 
 /**
- * Stat a record file, refusing anything that is not a regular file (a named pipe or a device would
- * block `readFileSync` forever) or that is at or over the size cap.
- * @returns {{ ok: true } | { ok: false, reason: string }}
+ * Name a value for a message without serialising it: a YAML alias can make it circular or
+ * exponentially large, and `JSON.stringify` on either throws (BUG-20 Round 2).
  */
-function _checkRecordFile(filePath, label) {
-  let stat;
+function _describe(raw) {
+  if (typeof raw === 'string') {
+    return JSON.stringify(raw.length > QUOTE_MAX ? `${raw.slice(0, QUOTE_MAX)}…` : raw);
+  }
+  if (raw === null) return 'empty';
+  // js-yaml 4 builds `!!binary` as a Uint8Array (a Buffer is one too).
+  if (raw instanceof Uint8Array) return 'binary data';
+  if (Array.isArray(raw)) return 'a list';
+  return typeof raw === 'object' ? 'a map' : typeof raw;
+}
+
+/**
+ * Read a record file through one open handle, refusing anything that is not a regular file (a named
+ * pipe or a device would block a read forever) or that is at or over the size cap. Checking and
+ * reading the same descriptor leaves no window for the path to be swapped in between; the open is
+ * non-blocking, so opening a pipe does not wait for a writer either. The cap is enforced on the bytes
+ * actually read as well, so a file that grows after the check is still refused (BUG-20 Round 3).
+ * @returns {{ ok: true, text: string } | { ok: false, reason: string }}
+ */
+function _readRecordFile(filePath, label) {
+  let fd;
   try {
-    stat = fs.statSync(filePath);
+    fd = fs.openSync(filePath, fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK || 0));
   } catch (err) {
-    return { ok: false, reason: `cannot stat ${label}: ${err.message}` };
+    if (err.code === 'EISDIR') return { ok: false, reason: `${label} is not a regular file` };
+    return { ok: false, reason: `cannot open ${label}: ${err.message}` };
   }
-  if (!stat.isFile()) {
-    return { ok: false, reason: `${label} is not a regular file` };
+  try {
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile()) {
+      return { ok: false, reason: `${label} is not a regular file` };
+    }
+    if (stat.size >= PKG_JSON_MAX_BYTES) {
+      // R2-M5: include the limit explicitly so operator + dev agent can
+      // see how close they are to the cap (and what to grep for if the
+      // cap ever needs raising).
+      return { ok: false, reason: `${label} size ${stat.size} >= cap ${PKG_JSON_MAX_BYTES} bytes` };
+    }
+    const buf = Buffer.alloc(PKG_JSON_MAX_BYTES);
+    let total = 0;
+    let n;
+    while (total < buf.length && (n = fs.readSync(fd, buf, total, buf.length - total, null)) > 0) {
+      total += n;
+    }
+    if (total >= PKG_JSON_MAX_BYTES) {
+      return { ok: false, reason: `${label} grew to >= cap ${PKG_JSON_MAX_BYTES} bytes while being read` };
+    }
+    return { ok: true, text: buf.toString('utf8', 0, total) };
+  } catch (err) {
+    return { ok: false, reason: `cannot read ${label}: ${err.message}` };
+  } finally {
+    // A failed close must not replace a result already read (BUG-20 Round 3).
+    try { fs.closeSync(fd); } catch { /* nothing to do */ }
   }
-  if (stat.size >= PKG_JSON_MAX_BYTES) {
-    // R2-M5: include the limit explicitly so operator + dev agent can
-    // see how close they are to the cap (and what to grep for if the
-    // cap ever needs raising).
-    return { ok: false, reason: `${label} size ${stat.size} >= cap ${PKG_JSON_MAX_BYTES} bytes` };
-  }
-  return { ok: true };
 }
 
 /**
@@ -90,31 +142,30 @@ function _checkRecordFile(filePath, label) {
 function _readBmadManifest(projectRoot) {
   const manifestPath = path.join(projectRoot, ...BMAD_MANIFEST_REL.split('/'));
   if (!fs.existsSync(manifestPath)) {
-    return { found: false, reason: `no ${BMAD_MANIFEST_REL}` };
+    return { found: false, present: false, reason: `no ${BMAD_MANIFEST_REL}` };
   }
-  const file = _checkRecordFile(manifestPath, BMAD_MANIFEST_REL);
+  const file = _readRecordFile(manifestPath, BMAD_MANIFEST_REL);
   if (!file.ok) return { found: false, reason: file.reason };
   let doc;
   try {
-    // FAILSAFE keeps every scalar a string: the default schema reads an unquoted `6.10` as the
-    // number 6.1 (below the floor), `7` as a number and a bare date as a Date.
-    doc = yaml.load(fs.readFileSync(manifestPath, 'utf8'), { schema: yaml.FAILSAFE_SCHEMA });
+    doc = yaml.load(file.text, { schema: MANIFEST_SCHEMA });
   } catch (err) {
     return { found: false, reason: `${BMAD_MANIFEST_REL} unparseable: ${err.message.split('\n')[0]}` };
   }
   const modules = doc && Array.isArray(doc.modules) ? doc.modules : [];
+  // The first `core` entry is the one read; BMAD writes one.
   const core = modules.find((m) => m && typeof m === 'object' && m.name === 'core');
+  const installation = doc && doc.installation && typeof doc.installation === 'object' ? doc.installation : null;
   const candidates = [
-    ['core', core && core.version],
-    ['installation', doc && doc.installation && typeof doc.installation === 'object' ? doc.installation.version : undefined],
+    ['core', core ? core.version : undefined],
+    ['installation', installation ? installation.version : undefined],
   ];
-  // A value that is not a version falls through to the next source rather than masking it.
+  // Core first, then installation.version; a value that is not a version is passed over.
   for (const [, raw] of candidates) {
     const v = _normalizeVersion(raw);
     if (VERSION_RE.test(v)) return { found: true, version: v };
   }
-  const seen = candidates.filter(([, raw]) => raw !== undefined)
-    .map(([k, raw]) => `${k} ${JSON.stringify(raw)}`);
+  const seen = candidates.filter(([, raw]) => raw !== undefined).map(([k, raw]) => `${k} ${_describe(raw)}`);
   return {
     found: false,
     reason: seen.length
@@ -131,28 +182,29 @@ function _readBmadManifest(projectRoot) {
 function _readBmadPackageJson(projectRoot) {
   const pkgPath = path.join(projectRoot, 'node_modules', BMAD_PACKAGE_NAME, 'package.json');
   if (!fs.existsSync(pkgPath)) {
-    return { found: false, reason: 'package not in node_modules' };
+    return { found: false, present: false, reason: 'package not in node_modules' };
   }
-  // R1-M6: size guard before unbounded readFileSync — corrupted/hostile
-  // package.json that's multi-GB would block the event loop or OOM.
-  const file = _checkRecordFile(pkgPath, 'package.json');
+  // R1-M6: size guard before reading — corrupted/hostile package.json that's
+  // multi-GB would block the event loop or OOM.
+  const file = _readRecordFile(pkgPath, 'package.json');
   if (!file.ok) return { found: false, reason: file.reason };
   let parsed;
   try {
-    parsed = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    parsed = JSON.parse(file.text);
   } catch (err) {
     return { found: false, reason: `package.json unparseable: ${err.message}` };
   }
   if (!parsed || typeof parsed !== 'object') {
     return { found: false, reason: 'package.json is not an object' };
   }
-  const v = parsed.version;
-  if (typeof v !== 'string' || v.trim() === '' || v === 'undefined' || v === 'null') {
-    return { found: false, reason: `version field invalid: ${JSON.stringify(v)}` };
+  const raw = parsed.version;
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    return { found: false, reason: `version field invalid: ${raw === undefined ? 'missing' : _describe(raw)}` };
   }
-  // R2-M1: a placeholder such as `6.3.x` would NaN-fall-through compareVersions as "equal".
+  // R2-M1: a placeholder such as `6.3.x` is not a version and must not be compared.
+  const v = _normalizeVersion(raw);
   if (!VERSION_RE.test(v)) {
-    return { found: false, reason: `package.json version field non-numeric: ${JSON.stringify(v)}` };
+    return { found: false, reason: `package.json version field non-numeric: ${_describe(raw)}` };
   }
   return { found: true, version: v };
 }
@@ -163,31 +215,37 @@ function _cleanVersion(version) {
 }
 
 /**
- * Whether a detected BMAD version is at or above REQUIRED_BMAD_VERSION. Shared with the installers'
- * "BMAD Method found" line, so it cannot show a green check for a version the preflight calls too old.
- * @param {string} version — as returned by detectBmadInstall
+ * Whether a BMAD version is at or above REQUIRED_BMAD_VERSION. A prerelease is compared as its
+ * release (`6.3.0-rc.1` as `6.3.0`), which runCompatPreflight then notes (R2-H4).
+ * @param {string} version
  * @returns {boolean}
  */
 function meetsBmadFloor(version) {
+  // Anything that is not a version fails the floor, rather than comparing as 0 or throwing.
+  if (typeof version !== 'string' || !VERSION_RE.test(version)) return false;
   return compareVersions(_cleanVersion(version), REQUIRED_BMAD_VERSION) >= 0;
 }
 
 /**
  * Find the installed BMAD version, from BMAD's install record first and
  * node_modules second. Writes nothing. A source whose version is not a
- * version (VERSION_RE) counts as not found, so it cannot mask the next one.
- * The installers' "BMAD Method found" line and the preflight both use this
- * and meetsBmadFloor, so the two cannot disagree (BUG-20).
+ * version (VERSION_RE) counts as not found there, and the next one is read.
  *
  * @param {string} projectRoot
- * @returns {{ found: boolean, version?: string, source: 'manifest'|'package'|null, reason?: string }}
+ * @returns {{ found: boolean, version?: string, source: 'manifest'|'package'|null, reason?: string, present?: boolean }}
+ *   `present` (when not found): whether either record exists at all, readable or not.
  */
 function detectBmadInstall(projectRoot) {
   const fromManifest = _readBmadManifest(projectRoot);
   if (fromManifest.found) return { ...fromManifest, source: 'manifest' };
   const fromPackage = _readBmadPackageJson(projectRoot);
   if (fromPackage.found) return { ...fromPackage, source: 'package' };
-  return { found: false, source: null, reason: `${fromManifest.reason}; ${fromPackage.reason}` };
+  return {
+    found: false,
+    source: null,
+    present: fromManifest.present !== false || fromPackage.present !== false,
+    reason: `${fromManifest.reason}; ${fromPackage.reason}`,
+  };
 }
 
 /**
@@ -196,26 +254,35 @@ function detectBmadInstall(projectRoot) {
  * for tests).
  *
  * @param {string} projectRoot
- * @returns {{ detected: boolean, version: string|null, source: 'manifest'|'package'|null, warning: string|null }}
+ * @returns {{ detected: boolean, version: string|null, source: 'manifest'|'package'|null, warning: string|null, recordPresent: boolean }}
+ *   `recordPresent`: an install record exists, even if no version could be read from it.
  */
 function runCompatPreflight(projectRoot) {
   if (!projectRoot || typeof projectRoot !== 'string') {
     throw new Error('runCompatPreflight: projectRoot must be a non-empty string');
   }
 
-  const probe = detectBmadInstall(projectRoot);
+  // preflight-soft-warn: never throw to the caller. The readers already turn every expected failure
+  // into a reason; this catch is what makes that hold for an unexpected one too (BUG-20 Round 2).
+  let probe;
+  try {
+    probe = detectBmadInstall(projectRoot);
+  } catch (err) {
+    let detail;
+    try { detail = String(err && err.message).slice(0, 200); } catch { detail = 'unreadable error'; }
+    // Unknown whether a record exists; "not determined" is the honest wording either way.
+    probe = { found: false, source: null, present: true, reason: `detection failed: ${detail}` };
+  }
   const { source } = probe;
 
   if (!probe.found) {
     const msg = `BMAD core not detected (${probe.reason}) — cannot verify v6.3 compatibility; proceeding anyway`;
     process.stderr.write(chalk.yellow(`  ⚠ ${msg}\n`));
-    return { detected: false, version: null, source: null, warning: msg };
+    return { detected: false, version: null, source: null, warning: msg, recordPresent: probe.present };
   }
 
-  // R1-H5: strip pre-release / build-metadata suffix before compareVersions
-  // (its naive `Number(part)` makes `"0-rc"` NaN, which falls through as
-  // "equal"). R2-M1's non-numeric guard now lives in the readers, as
-  // VERSION_RE, so an unusable value falls through to the next source.
+  // The floor compares a prerelease as its release (R2-H4, below). compareVersions
+  // itself orders `6.3.0-rc.1` below `6.3.0`, per SemVer §11; the strip is the choice.
   const cleanVersion = _cleanVersion(probe.version);
   if (meetsBmadFloor(probe.version)) {
     // R2-H4: prerelease/build-metadata visible-info WARNING. Per SemVer
@@ -227,9 +294,9 @@ function runCompatPreflight(projectRoot) {
     if (probe.version !== cleanVersion) {
       const msg = `BMAD ${probe.version} detected (prerelease/build-metadata; treating as ${cleanVersion} for compat gate)`;
       process.stderr.write(chalk.yellow(`  ⚠ ${msg}\n`));
-      return { detected: true, version: probe.version, source, warning: msg };
+      return { detected: true, version: probe.version, source, warning: msg, recordPresent: true };
     }
-    return { detected: true, version: probe.version, source, warning: null };
+    return { detected: true, version: probe.version, source, warning: null, recordPresent: true };
   }
 
   // A manifest install is upgraded by re-running BMAD's installer; a package install by npm.
@@ -238,7 +305,7 @@ function runCompatPreflight(projectRoot) {
     : `npm install ${BMAD_PACKAGE_NAME}@latest`;
   const msg = `BMAD ${probe.version} detected; Convoke 4.0 requires >= ${REQUIRED_BMAD_VERSION}. Upgrade BMAD core: ${upgrade}`;
   process.stderr.write(chalk.yellow(`  ⚠ ${msg}\n`));
-  return { detected: true, version: probe.version, source, warning: msg };
+  return { detected: true, version: probe.version, source, warning: msg, recordPresent: true };
 }
 
 module.exports = {

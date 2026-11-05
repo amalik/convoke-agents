@@ -77,7 +77,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   yields a version; the warning says what it found in each. The installers' own line had the same fault —
   it looked for a `_bmad/_config/bmad.yaml` that BMAD does not write, so it printed `⚠ BMAD Method not
   detected (Convoke will install standalone)` on BMAD projects — and now reports what the preflight found:
-  `✓ BMAD Method <version> found`, or a yellow `found, below the 6.3.0 Convoke needs` for an older one.
+  `✓ BMAD Method <version> found` only when the preflight raised no warning — a yellow `found, below the
+  6.3.0 Convoke needs` for an older one, `found (see the BMAD note)` for a prerelease, and `BMAD version
+  not determined (see the BMAD warning)` when a record exists but holds no version Convoke can read.
   Nothing is blocked either way; these checks still only warn.
 
 - **`convoke-doctor` reports an agent opt-out as applied only when it is (`T266`).** An `excluded_agents` entry

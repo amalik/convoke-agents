@@ -5,7 +5,7 @@ const path = require('path');
 const { refreshInstallation } = require('./update/lib/refresh-installation');
 const { findProjectRoot } = require('./update/lib/utils');
 const {
-  runCompatPreflight, detectBmadInstall, meetsBmadFloor, REQUIRED_BMAD_VERSION,
+  runCompatPreflight, meetsBmadFloor, REQUIRED_BMAD_VERSION,
 } = require('./update/lib/compat-preflight');
 const { GYRE_AGENTS } = require('./update/lib/agent-registry');
 const { evaluateAgentInstall } = require('./lib/agent-install-checks');
@@ -32,7 +32,7 @@ function printBanner() {
   console.log('');
 }
 
-function checkPrerequisites(projectRoot) {
+function checkPrerequisites(projectRoot, preflight) {
   console.log(`${CYAN}[1/4]${RESET} Checking prerequisites...`);
 
   const bmadDir = path.join(projectRoot, '_bmad');
@@ -46,14 +46,19 @@ function checkPrerequisites(projectRoot) {
 
   // Check for an installed BMAD Method (optional). BMAD records its install in
   // `_bmad/_config/manifest.yaml`; the `bmad.yaml` read here before BUG-20 is a file BMAD does not write.
-  // Same detection and floor as runCompatPreflight, so this line cannot contradict its warning.
-  const bmad = detectBmadInstall(projectRoot);
-  if (bmad.found && meetsBmadFloor(bmad.version)) {
-    console.log(`${GREEN}  ✓${RESET} BMAD Method ${bmad.version} found`);
-  } else if (bmad.found) {
-    console.log(`${YELLOW}  ⚠${RESET} BMAD Method ${bmad.version} found, below the ${REQUIRED_BMAD_VERSION} Convoke needs (see the warning above)`);
-  } else {
+  // Reports runCompatPreflight's own result, not a second detection, so it cannot contradict the
+  // preflight's warning: a green check only when the preflight raised none.
+  if (!preflight || (!preflight.detected && !preflight.recordPresent)) {
     console.log(`${YELLOW}  ⚠${RESET} BMAD Method not detected (Convoke will install standalone)`);
+  } else if (!preflight.detected) {
+    // A record exists but no version could be read from it: say so, not "standalone".
+    console.log(`${YELLOW}  ⚠${RESET} BMAD version not determined (see the BMAD warning)`);
+  } else if (!meetsBmadFloor(preflight.version)) {
+    console.log(`${YELLOW}  ⚠${RESET} BMAD Method ${preflight.version} found, below the ${REQUIRED_BMAD_VERSION} Convoke needs (see the BMAD warning)`);
+  } else if (preflight.warning) {
+    console.log(`${YELLOW}  ⚠${RESET} BMAD Method ${preflight.version} found (see the BMAD note)`);
+  } else {
+    console.log(`${GREEN}  ✓${RESET} BMAD Method ${preflight.version} found`);
   }
 
   console.log(`${GREEN}  ✓${RESET} Prerequisites met`);
@@ -167,10 +172,10 @@ async function main() {
     // gracefully via Decision 1's clause-4 fallback.
     const projectRoot = findProjectRoot() || process.cwd();
 
-    runCompatPreflight(projectRoot);
+    const preflight = runCompatPreflight(projectRoot);
 
     printBanner();
-    checkPrerequisites(projectRoot);
+    checkPrerequisites(projectRoot, preflight);
     createOutputDirectory(projectRoot);
 
     console.log(`${CYAN}[3/4]${RESET} Installing agents, workflows, config, and contracts...`);

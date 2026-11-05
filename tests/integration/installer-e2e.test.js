@@ -117,7 +117,7 @@ describe('installers report a BMAD install that exists (BUG-20)', () => {
         const { exitCode, stdout, stderr } = await runScript(script, [], { cwd: dir, timeout: 60000 });
         assert.equal(exitCode, 0, stderr);
         assert.ok(stderr.includes('BMAD 6.2.0 detected; Convoke 4.0 requires >= 6.3.0'), stderr);
-        assert.ok(stdout.includes('BMAD Method 6.2.0 found, below the 6.3.0 Convoke needs'), stdout);
+        assert.ok(stdout.includes('BMAD Method 6.2.0 found, below the 6.3.0 Convoke needs (see the BMAD warning)'), stdout);
         assert.ok(!/✓\S*\s+BMAD Method 6\.2\.0 found/.test(stdout), stdout);
       } finally {
         await removeTempDir(dir);
@@ -133,8 +133,38 @@ describe('installers report a BMAD install that exists (BUG-20)', () => {
         const { exitCode, stdout, stderr } = await runScript(script, [], { cwd: dir, timeout: 60000 });
         assert.equal(exitCode, 0, stderr);
         assert.ok(stderr.includes('BMAD core not detected'), stderr);
-        assert.ok(stdout.includes('BMAD Method not detected'), stdout);
+        assert.ok(stdout.includes('BMAD version not determined (see the BMAD warning)'), stdout);
+        assert.ok(!stdout.includes('BMAD Method not detected'), stdout);
         assert.ok(!stdout.includes('BMAD Method latest found'), stdout);
+      } finally {
+        await removeTempDir(dir);
+      }
+    });
+
+    it(`${team}: a prerelease is reported found with its note, never with a green check`, async () => {
+      const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-e2e-'));
+      try {
+        await fs.ensureDir(path.join(dir, '_bmad/_config'));
+        await fs.writeFile(path.join(dir, '_bmad/_config/manifest.yaml'),
+          MANIFEST.replace(/6\.10\.0/g, '6.3.0-rc.1'), 'utf8');
+        const { exitCode, stdout, stderr } = await runScript(script, [], { cwd: dir, timeout: 60000 });
+        assert.equal(exitCode, 0, stderr);
+        assert.ok(stderr.includes('BMAD 6.3.0-rc.1 detected (prerelease'), stderr);
+        assert.ok(stdout.includes('BMAD Method 6.3.0-rc.1 found (see the BMAD note)'), stdout);
+        assert.ok(!/✓\S*\s+BMAD Method 6\.3\.0-rc\.1 found/.test(stdout), stdout);
+      } finally {
+        await removeTempDir(dir);
+      }
+    });
+
+    it(`${team}: a record that crashes a careless parser still installs, exit 0`, async () => {
+      const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-e2e-'));
+      try {
+        await fs.ensureDir(path.join(dir, '_bmad/_config'));
+        await fs.writeFile(path.join(dir, '_bmad/_config/manifest.yaml'), 'installation:\n  version: &a [*a]\n', 'utf8');
+        const { exitCode, stdout, stderr } = await runScript(script, [], { cwd: dir, timeout: 60000 });
+        assert.equal(exitCode, 0, stderr);
+        assert.ok(stdout.includes('BMAD version not determined (see the BMAD warning)'), stdout);
       } finally {
         await removeTempDir(dir);
       }
@@ -146,6 +176,7 @@ describe('installers report a BMAD install that exists (BUG-20)', () => {
         const { exitCode, stdout, stderr } = await runScript(script, [], { cwd: dir, timeout: 60000 });
         assert.equal(exitCode, 0, stderr);
         assert.ok(stdout.includes('BMAD Method not detected'), stdout);
+        assert.ok(!stdout.includes('not determined'), stdout);
         assert.ok(stderr.includes('BMAD core not detected'), stderr);
       } finally {
         await removeTempDir(dir);
