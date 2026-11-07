@@ -175,12 +175,16 @@ function makeReporter(opts = {}) {
   const { quiet = false } = opts;
   const results = { success: 0, failed: 0, skipped: 0, warnings: 0 };
   return {
-    success(skill, relPath, warnings) {
+    success(skill, relPath, warnings = []) {
       results.success++;
-      results.warnings += warnings;
+      results.warnings += warnings.length;
       if (quiet) return;
-      const suffix = warnings > 0 ? ` (${warnings} warnings)` : '';
+      const suffix = warnings.length > 0 ? ` (${warnings.length} warnings)` : '';
       process.stdout.write(`✅ ${skill} → ${relPath}${suffix}\n`);
+      // T259: the text, not only the count — otherwise what an export lost is invisible.
+      for (const w of warnings) {
+        process.stdout.write(`   ⚠ ${String((w && w.message) || (w && w.type) || w)}\n`);
+      }
     },
     failure(skill, error) {
       // Failures always emit — `--quiet` suppresses success noise, not errors.
@@ -304,6 +308,20 @@ function buildReadme(skillRow, result) {
   out = out.replaceAll('<tier>', skillRow.tier);
   out = out.replaceAll('<standalone | light-deps | pipeline>', skillRow.tier);
 
+  // T259: list the source files the export does not carry. Appended before the checks below, so a
+  // file name cannot smuggle a comment marker past them. Capped (R1 review): validate-exports
+  // refuses a README over 80 lines and real ones already run ~60. Past the cap the rest share one
+  // line, so every file stays named in the export itself — the warnings are not part of it, and
+  // --quiet hides them (R2 review).
+  if (Array.isArray(result.notExported) && result.notExported.length > 0) {
+    const MAX_LISTED = 10;
+    const shown = result.notExported.slice(0, MAX_LISTED).map((f) => `- \`${f}\``);
+    const rest = result.notExported.slice(MAX_LISTED);
+    if (rest.length > 0) shown.push(`- …and ${rest.length} more: ${rest.map((f) => `\`${f}\``).join(', ')}`);
+    out += '\n\n## Files not included\n\nThe original skill also ships these files. The instructions may refer to ' +
+      'them; they are not part of this export:\n\n' + shown.join('\n') + '\n';
+  }
+
   // The template is already comment-free, so any marker here came in through a
   // substituted value. Refuse rather than strip: a complete comment would ship
   // invisibly into a user-facing README, and a bare marker is worse — GitHub and
@@ -394,7 +412,7 @@ function runSingle(skillName, outputBase, dryRun, projectRoot, reporter) {
     }
   }
 
-  reporter.success(skillName, relInstructions, result.warnings.length);
+  reporter.success(skillName, relInstructions, result.warnings);
   return { ok: true, exitCode: EXIT_SUCCESS };
 }
 

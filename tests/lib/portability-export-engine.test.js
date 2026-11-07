@@ -27,6 +27,11 @@ const REQUIRED_HEADING_PATTERNS = [
   /^## What you produce$/m,
 ];
 
+/** Warnings about transforming the instructions, without T259's list of files not carried. */
+function transformationWarnings(result) {
+  return result.warnings.filter((w) => w.type !== 'source-file-not-exported');
+}
+
 /**
  * Shared structural-invariant assertions per AC #8 + #9.
  */
@@ -88,11 +93,14 @@ function assertStructuralInvariants(result, expectedName, expectedIcon) {
   // 6. Persona name appears in instructions text
   assert.ok(result.instructions.includes(expectedName));
 
-  // 7. warnings.length <= 2
-  if (result.warnings.length > 2) {
-    console.error(`${expectedName} produced ${result.warnings.length} warnings:`, result.warnings);
+  // 7. transformation warnings <= 2. T259's `source-file-not-exported` reports what the skill ships
+  // beside its instructions, not a loss in transforming them, so it is outside this budget and
+  // asserted by name in the T259 block.
+  const lossy = transformationWarnings(result);
+  if (lossy.length > 2) {
+    console.error(`${expectedName} produced ${lossy.length} transformation warnings:`, lossy);
   }
-  assert.ok(result.warnings.length <= 2);
+  assert.ok(lossy.length <= 2);
 
   // 8. All warning types are in the allowed set
   for (const warning of result.warnings) {
@@ -170,17 +178,17 @@ describe('Export engine (sp-2-2)', () => {
     assert.equal(snapshot(), before, 'exportSkill mutated the project tree — the engine must be read-only');
   });
 
-  it('Test 7: Carson produces warnings.length <= 2 with allowed types only', () => {
+  it('Test 7: Carson produces <= 2 transformation warnings, all of allowed types', () => {
     const result = exportSkill('bmad-brainstorming', projectRoot);
-    assert.ok(result.warnings.length <= 2);
+    assert.ok(transformationWarnings(result).length <= 2);
     for (const warning of result.warnings) {
       assert.equal(ALLOWED_WARNING_TYPES.has(warning.type), true);
     }
   });
 
-  it('Test 8: Winston produces warnings.length <= 2 with allowed types only', () => {
+  it('Test 8: Winston produces <= 2 transformation warnings, all of allowed types', () => {
     const result = exportSkill('bmad-agent-architect', projectRoot);
-    assert.ok(result.warnings.length <= 2);
+    assert.ok(transformationWarnings(result).length <= 2);
     for (const warning of result.warnings) {
       assert.equal(ALLOWED_WARNING_TYPES.has(warning.type), true);
     }
@@ -223,7 +231,7 @@ describe('Export engine (sp-2-2)', () => {
     );
     // Catch-all must NOT have warned for any your-X residue (else loop reorder regressed)
     const yourXWarnings = result.warnings.filter((w) =>
-      /unmapped config var stripped via catch-all: \{your-/.test(w.message || '')
+      /unmapped config var \{your-/.test(w.message || '')
     );
     assert.strictEqual(
       yourXWarnings.length,
@@ -492,5 +500,255 @@ describe('T186: which skills may be exported, and what a refusal says', () => {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+// T259 (operator rulings 2026-11-05): the Phase 6 catch-all replaced every unmapped `{variable}`
+// with one literal, `your-project-context`, so distinct paths in an exported skill became one name
+// and its instructions said the wrong thing ("cp ../template.md your-project-context"). Each
+// unmapped variable now gets a name of its own; a brace pair that is not a variable is left alone;
+// and source files the export does not carry are reported, not silently dropped.
+describe('T259: an export keeps distinct variables distinct and reports what it leaves out', () => {
+  const { applyTransformations } = require('../../scripts/portability/export-engine');
+
+  it('two different unmapped variables become two different names, each from its own', () => {
+    const warnings = [];
+    const out = applyTransformations('cp "../template.md" "{brainstorming_session_output_file}"\nLoad `{templateFile}`', warnings);
+    assert.ok(out.includes('"your-brainstorming-session-output-file"'), out);
+    assert.ok(out.includes('`your-template-file`'), out);
+    assert.ok(!out.includes('your-project-context'), out);
+    assert.equal(warnings.filter((w) => w.type === 'unresolved-template-path').length, 2, JSON.stringify(warnings));
+  });
+
+  it('a double-brace unmapped variable is named the same way', () => {
+    const out = applyTransformations('Session {{sessionId}} for {{user_name}}', []);
+    assert.equal(out, 'Session your-session-id for your-name');
+  });
+
+  it('a regex quantifier is not a variable and is left as written', () => {
+    const warnings = [];
+    const out = applyTransformations('Match names with /[a-z]{2}/ and /x{10}/', warnings);
+    assert.equal(out, 'Match names with /[a-z]{2}/ and /x{10}/');
+    assert.equal(warnings.length, 0, JSON.stringify(warnings));
+  });
+
+  it('an exported skill names no variable `your-project-context`', () => {
+    const result = exportSkill('bmad-brainstorming', FIXTURE_ROOT);
+    assert.ok(!result.instructions.includes('your-project-context'),
+      result.instructions.split('\n').filter((l) => l.includes('your-project-context')).slice(0, 3).join('\n'));
+    assert.ok(result.instructions.includes('your-brainstorming-session-output-file'));
+  });
+
+  it('source files the export does not carry are listed and warned about, inlined ones are not', () => {
+    const result = exportSkill('bmad-brainstorming', FIXTURE_ROOT);
+    assert.deepEqual([...result.notExported].sort(), ['brain-methods.csv', 'template.md']);
+    const w = result.warnings.filter((x) => x.type === 'source-file-not-exported');
+    assert.deepEqual(w.map((x) => x.message).sort(), [
+      'not included in the export: brain-methods.csv',
+      'not included in the export: template.md',
+    ]);
+    for (const x of result.warnings) assert.equal(ALLOWED_WARNING_TYPES.has(x.type), true, x.type);
+  });
+  it('a template the export inlines is not listed as left out', () => {
+    const result = exportSkill('bmad-create-prd', FIXTURE_ROOT);
+    assert.ok(result.instructions.includes('## Template: Prd Template'));
+    assert.deepEqual(result.notExported, ['data/']);
+  });
+});
+
+// T259 Round 1 review remediation.
+describe('T259 R1: naming edge cases and what counts as left out', () => {
+  const os = require('os');
+  const { applyTransformations, exportedVarName, listNotExported } = require('../../scripts/portability/export-engine');
+
+  it('exportedVarName kebab-cases each form, splits acronyms, and never doubles the prefix', () => {
+    assert.equal(exportedVarName('templateFile'), 'your-template-file');
+    assert.equal(exportedVarName('template_file'), 'your-template-file');
+    assert.equal(exportedVarName('XMLParser'), 'your-xml-parser');
+    assert.equal(exportedVarName('parseHTMLFile'), 'your-parse-html-file');
+    assert.equal(exportedVarName('your_notes'), 'your-notes');
+    // R2: an acronym is split off only before a real word, so a plural acronym stays whole.
+    assert.equal(exportedVarName('storyIDs'), 'your-story-ids');
+    assert.equal(exportedVarName('inputURLs'), 'your-input-urls');
+    assert.equal(exportedVarName('PRDs'), 'your-prds');
+    assert.equal(exportedVarName('2'), null);
+    assert.equal(exportedVarName('_'), null);
+  });
+
+  it('{else} and {endif} are template syntax like {if …} and {/if}, and are left as written in any case', () => {
+    const warnings = [];
+    const src = '{if count > 0}✓ loaded{else}(none found){/if} {if x}a{ELSE}b{endif} {Endif}';
+    assert.equal(applyTransformations(src, warnings), src);
+    assert.equal(warnings.length, 0, JSON.stringify(warnings));
+  });
+
+  it('a clash is caught across sections when they share one record of names', () => {
+    const warnings = [];
+    const nameOwners = new Map();
+    applyTransformations('Read {yourFile}', warnings, { nameOwners });
+    applyTransformations('then {file}', warnings, { nameOwners });
+    const w = warnings.find((x) => x.message.startsWith('unmapped config var {file}'));
+    assert.ok(w, JSON.stringify(warnings));
+    assert.match(w.message, /the same name as \{yourFile\}$/);
+  });
+
+  it('an unmapped variable that lands on a mapped name says so', () => {
+    const warnings = [];
+    const out = applyTransformations('Hello {user_name}, open {name}', warnings);
+    assert.equal(out, 'Hello your-name, open your-name');
+    const w = warnings.find((x) => x.message.startsWith('unmapped config var {name}'));
+    assert.ok(w, JSON.stringify(warnings));
+    assert.match(w.message, /exported as your-name, the same name as \{user_name\}$/);
+  });
+
+  it('two unmapped variables that land on one name say so', () => {
+    const warnings = [];
+    const out = applyTransformations('Read {yourFile} then {file}', warnings);
+    assert.equal(out, 'Read your-file then your-file');
+    const w = warnings.find((x) => x.message.startsWith('unmapped config var {file}'));
+    assert.ok(w, JSON.stringify(warnings));
+    assert.match(w.message, /exported as your-file, the same name as \{yourFile\}$/);
+  });
+
+  it('kebab-equivalent spellings of one variable are not reported as a clash', () => {
+    const warnings = [];
+    applyTransformations('{projectType} and {project_type}', warnings);
+    assert.ok(!warnings.some((x) => /the same name as/.test(x.message)), JSON.stringify(warnings));
+  });
+
+  function tree(spec) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 't259-r1-'));
+    for (const rel of spec) {
+      const full = path.join(root, rel);
+      if (rel.endsWith('/')) fs.mkdirSync(full, { recursive: true });
+      else { fs.mkdirSync(path.dirname(full), { recursive: true }); fs.writeFileSync(full, 'x'); }
+    }
+    return root;
+  }
+
+  it('a folder at any depth holding an inlined template is opened, not listed whole', () => {
+    const root = tree(['SKILL.md', 'data/templates/prd.md', 'data/templates/other.md', 'data/notes.md', 'data/deep/a/b.md']);
+    try {
+      const got = listNotExported(root, [path.join(root, 'data/templates/prd.md')]);
+      assert.deepEqual(got, ['data/deep/', 'data/notes.md', 'data/templates/other.md']);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('only the skill\'s own top-level SKILL.md and steps folders count as inlined, not same-named ones deeper down', () => {
+    const root = tree(['SKILL.md', 'data/t.md', 'data/SKILL.md', 'data/steps/s.md', 'data/steps/x.md']);
+    try {
+      const got = listNotExported(root, [path.join(root, 'data/t.md'), path.join(root, 'data/steps/x.md')]);
+      assert.deepEqual(got, ['data/SKILL.md', 'data/steps/s.md']);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('skips inlined and framework files, backups and dotfiles, but lists what steps folders carry besides .md', () => {
+    const root = tree([
+      'SKILL.md', 'workflow.md', 'bmad-skill-manifest.yaml', '.DS_Store', 'old.md.bak', 'old.bak/x.md',
+      'steps/step-01.md', 'steps/step-01.md.bak', 'steps/helper.csv', 'steps-c/step-01.md', 'steps-c/sub/x.md',
+      'kept.md',
+    ]);
+    try {
+      assert.deepEqual(listNotExported(root, []), ['kept.md', 'steps-c/sub/', 'steps/helper.csv']);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('an export catches a clash between two of its sections', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 't259-r2-'));
+    try {
+      fs.cpSync(FIXTURE_ROOT, root, { recursive: true });
+      const step = path.join(root, '_bmad/core/skills/bmad-brainstorming/steps/step-01-session-setup.md');
+      let src = fs.readFileSync(step, 'utf8');
+      // `## YOUR TASK` feeds "How to proceed"; a `## SUCCESS METRICS` bullet feeds "Quality checks".
+      // {yourFile} is in both sections; {file} only in the second, so the clash is between sections.
+      src = src.replace('## YOUR TASK:\n', '## YOUR TASK:\n\nRead {yourFile} first.\n');
+      src = src.replace('## SUCCESS METRICS:\n', '## SUCCESS METRICS:\n\n- Wrote {file} from {yourFile} to disk.\n');
+      fs.writeFileSync(step, src);
+      const result = exportSkill('bmad-brainstorming', root);
+      assert.ok(result.sections.howToProceed.includes('your-file') && result.sections.qualityChecks.includes('your-file'),
+        'the two variables must land in different sections for this test to mean anything');
+      assert.equal(result.warnings.filter((x) => x.message.startsWith('unmapped config var {yourFile}')).length, 1,
+        'one warning per variable per export, though it appears in two sections (R3)');
+      const w = result.warnings.find((x) => x.message.startsWith('unmapped config var {file}'));
+      assert.ok(w, JSON.stringify(result.warnings.map((x) => x.message)));
+      assert.match(w.message, /the same name as \{yourFile\}$/);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('a symlinked steps- folder is listed, because the loader does not read it', () => {
+    const root = tree(['SKILL.md', 'real-steps/step-01.md']);
+    try {
+      fs.symlinkSync(path.join(root, 'real-steps'), path.join(root, 'steps-x'), 'dir');
+      assert.deepEqual(listNotExported(root, []), ['real-steps/', 'steps-x/']);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('inlined paths match through a symlinked skill folder', () => {
+    const real = tree(['SKILL.md', 'data/templates/t.md', 'data/other.md']);
+    const alias = real + '-alias';
+    try {
+      fs.symlinkSync(real, alias, 'dir');
+      assert.deepEqual(listNotExported(alias, [path.join(real, 'data/templates/t.md')]), ['data/other.md']);
+      assert.deepEqual(listNotExported(real, [path.join(alias, 'data/templates/t.md')]), ['data/other.md']);
+    } finally { fs.rmSync(alias, { force: true }); fs.rmSync(real, { recursive: true, force: true }); }
+  });
+
+  // R3 review: each case below was broken by a previous round's fix. Pinned so none comes back.
+  it('R3: a symlink back up the tree is listed once, not walked forever', () => {
+    const root = tree(['SKILL.md', 'data/templates/t.md', 'data/notes.md']);
+    try {
+      fs.symlinkSync(path.join(root, 'data'), path.join(root, 'data/loop'), 'dir');
+      fs.symlinkSync(root, path.join(root, 'data/up'), 'dir');
+      assert.deepEqual(listNotExported(root, [path.join(root, 'data/templates/t.md')]), ['data/loop/', 'data/notes.md', 'data/up/']);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('R3: an inlined template that is a symlink to a file elsewhere still counts as inlined', () => {
+    const root = tree(['skill/SKILL.md', 'ext/tpl.md']);
+    try {
+      fs.mkdirSync(path.join(root, 'skill/data'));
+      fs.symlinkSync(path.join(root, 'ext/tpl.md'), path.join(root, 'skill/data/tpl.md'), 'file');
+      assert.deepEqual(listNotExported(path.join(root, 'skill'), [path.join(root, 'skill/data/tpl.md')]), []);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('R3: a relative inlined path is read from the working directory, as callers pass it', () => {
+    const root = tree(['skill/SKILL.md', 'skill/data/tpl.md', 'skill/data/other.md']);
+    const cwd = process.cwd();
+    try {
+      process.chdir(root);
+      assert.deepEqual(listNotExported('skill', ['skill/data/tpl.md']), ['data/other.md']);
+    } finally { process.chdir(cwd); fs.rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it('R3: each acronym case the reviews raised splits as a reader would', () => {
+    const cases = {
+      XMLParser: 'your-xml-parser', parseHTMLFile: 'your-parse-html-file', HTTPServer: 'your-http-server',
+      HTTPSServer: 'your-https-server', APIKey: 'your-api-key', IOError: 'your-io-error',
+      storyIDs: 'your-story-ids', inputURLs: 'your-input-urls', PRDs: 'your-prds', IDsList: 'your-ids-list',
+      getURLsFor: 'your-get-urls-for', URLsTo: 'your-urls-to', userIDsByName: 'your-user-ids-by-name',
+      getIDOf: 'your-get-id-of', mapIDToName: 'your-map-id-to-name', HTMLId: 'your-html-id', URLTo: 'your-url-to',
+      XMLIn: 'your-xml-in', APIUsage: 'your-api-usage',
+      // Known limit: an acronym then a final `Is` or `As` reads as a plural acronym (`IDIs`, `XMLAs`).
+      userIDIs: 'your-user-idis', loadXMLAs: 'your-load-xmlas',
+    };
+    const got = Object.fromEntries(Object.keys(cases).map((k) => [k, exportedVarName(k)]));
+    assert.deepEqual(got, cases);
+  });
+
+  it('R3: one variable is warned about once per export, not once per section', () => {
+    const warnings = [];
+    const state = { nameOwners: new Map(), unmappedSeen: new Set() };
+    applyTransformations('Read {foo}', warnings, state);
+    applyTransformations('then {foo} again', warnings, state);
+    assert.equal(warnings.filter((x) => x.message.startsWith('unmapped config var {foo}')).length, 1, JSON.stringify(warnings));
+  });
+
+  it('a symlinked folder is listed as a folder', () => {
+    const root = tree(['SKILL.md', 'real/a.md']);
+    try {
+      fs.symlinkSync(path.join(root, 'real'), path.join(root, 'linked'), 'dir');
+      assert.deepEqual(listNotExported(root, []), ['linked/', 'real/']);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
   });
 });

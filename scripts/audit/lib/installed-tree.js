@@ -83,11 +83,11 @@ const path = require('path');
 const RUNTIME_DATA_FILES = [
   {
     file: '_bmad/_config/skill-manifest.csv',
-    readSite: 'scripts/portability/convoke-export.js:360',
+    readSite: 'scripts/portability/convoke-export.js:378',
     // An `alsoRead` entry is a bare `path:NNN` string, or `{site, token}` when it has been
     // de-lined. The object form exists because the entry-wide `alsoReadToken` could not
     // express ONE de-lined site among several — so the only way to repair a rotted number
-    // here was to write a new number. The doctor's site is de-lined. `export-engine.js:98`
+    // here was to write a new number. The doctor's site is de-lined. `export-engine.js:99`
     // keeps its number because it CANNOT be de-lined with the natural token: the line text
     // `const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');`
     // occurs three times in that file, so `anchorLine` reports it ambiguous. That is a blocker,
@@ -95,7 +95,7 @@ const RUNTIME_DATA_FILES = [
     // touch it", which reads as a choice. Converting it needs a longer, multi-line anchor.
     // Re-derive: grep -cF "const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');" scripts/portability/export-engine.js
     alsoRead: [
-      'scripts/portability/export-engine.js:98',
+      'scripts/portability/export-engine.js:99',
       { site: 'scripts/convoke-doctor.js',
         token: "const manifestPath = path.join(projectRoot, '_bmad/_config/skill-manifest.csv');" },
     ],
@@ -110,7 +110,7 @@ const RUNTIME_DATA_FILES = [
   {
     file: '_bmad/_config/agent-manifest.csv',
     readSite: 'scripts/update/lib/validator.js:291',
-    alsoRead: ['scripts/portability/export-engine.js:168'],
+    alsoRead: ['scripts/portability/export-engine.js:169'],
     // `:308` is `fs.writeFile(manifestPath, …)` — the write itself. The first draft cited
     // `:237`, which only DECLARES the destination path; deleting the write and leaving the
     // declaration would have kept the rot alarm green. Review 2026-08-30.

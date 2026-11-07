@@ -300,3 +300,41 @@ describe('convoke-export CLI — --quiet flag (I50)', () => {
     assert.match(result.stderr, /Unknown flag/);
   });
 });
+
+// T259: the CLI printed only a count ("7 warnings"), so what an export lost was invisible.
+describe('convoke-export prints what each warning says (T259)', () => {
+  it('each warning is printed under the success line, and --quiet suppresses them', () => {
+    const out = runCli(['bmad-brainstorming', '--dry-run']);
+    assert.equal(out.status, 0, out.stderr);
+    assert.match(out.stdout, /\n {3}⚠ not included in the export: template\.md\n/);
+    assert.match(out.stdout, /\n {3}⚠ unmapped config var \{brainstorming_session_output_file\} exported as your-brainstorming-session-output-file\n/);
+    const quiet = runCli(['bmad-brainstorming', '--dry-run', '--quiet']);
+    assert.equal(quiet.status, 0, quiet.stderr);
+    assert.ok(!quiet.stdout.includes('⚠'), quiet.stdout);
+  });
+
+  it('the README lists the source files the export does not include', () => {
+    const { buildReadme } = require('../../scripts/portability/convoke-export');
+    const { exportSkill, loadSkillRow } = require('../../scripts/portability/export-engine');
+    const result = exportSkill('bmad-brainstorming', FIXTURE_ROOT);
+    const readme = buildReadme(loadSkillRow('bmad-brainstorming', FIXTURE_ROOT), result);
+    assert.match(readme, /## Files not included/);
+    assert.match(readme, /^- `template\.md`$/m);
+    assert.match(readme, /^- `brain-methods\.csv`$/m);
+  });
+
+  // R1 review: validate-exports refuses a README over 80 lines, and real READMEs already run ~60.
+  it('a long list of files left out is capped, so the README stays within validate-exports\' limit', () => {
+    const { buildReadme } = require('../../scripts/portability/convoke-export');
+    const { exportSkill, loadSkillRow } = require('../../scripts/portability/export-engine');
+    const result = exportSkill('bmad-brainstorming', FIXTURE_ROOT);
+    const many = Array.from({ length: 40 }, (_, i) => `file-${String(i).padStart(2, '0')}.md`);
+    const readme = buildReadme(loadSkillRow('bmad-brainstorming', FIXTURE_ROOT), { ...result, notExported: many });
+    assert.ok(readme.split('\n').length <= 80, `${readme.split('\n').length} lines`);
+    assert.match(readme, /^- `file-00\.md`$/m);
+    // R2: the remainder stays named, on one line — warnings are not part of the export, and --quiet hides them.
+    const rest = many.slice(10).map((f) => `\`${f}\``).join(', ');
+    assert.ok(readme.split('\n').includes(`- …and 30 more: ${rest}`), readme.split('\n').slice(-4).join('\n'));
+    assert.ok(!/^- `file-10\.md`$/m.test(readme), 'entries past the cap are not given a line each');
+  });
+});

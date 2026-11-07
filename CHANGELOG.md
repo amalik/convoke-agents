@@ -81,6 +81,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   6.3.0 Convoke needs` for an older one, `found (see the BMAD note)` for a prerelease, and `BMAD version
   not determined (see the BMAD warning)` when a record exists but holds no version Convoke can read.
   Nothing is blocked either way; these checks still only warn.
+- **`convoke-export` no longer turns a skill's own paths into one wrong name, and says what it left out
+  (`T259`).** Every placeholder a skill defined for itself — an output file, a template, a step to return
+  to — was exported as the same `your-project-context`, so the instructions read, for example,
+  `cp "../template.md" "your-project-context"`. Each now keeps a name of its own
+  (`your-brainstorming-session-output-file`, `your-template-file`). A brace pair with no letters in it, such
+  as the regex quantifier `{2}`, is no longer rewritten, and neither are `{else}` and `{endif}` in a
+  skill's `{if …}{else}{/if}` text. If two different placeholders still end up with one name, the warning says
+  which. Files the skill ships beside its instructions (a `template.md`, a `.csv`, a
+  `templates/` folder) are still not copied, but the export now names them: in its output, as a warning
+  line, and in a "Files not included" section of the exported README. The command also prints what each
+  warning says, not only how many there were; `--quiet` still hides them.
 
 - **`convoke-doctor` reports an agent opt-out as applied only when it is (`T266`).** An `excluded_agents` entry
   is applied by the next refresh, upgrade or install — not by `convoke-update` on an installation that is

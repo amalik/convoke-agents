@@ -58,6 +58,7 @@ const ALLOWED_WARNING_TYPES = new Set([
   'deep-conditional-skipped',
   'unstripped-xml-tag',
   'step-file-not-found',
+  'source-file-not-exported',
 ]);
 
 // =============================================================================
@@ -464,6 +465,102 @@ const CONFIG_VAR_MAP = {
   implementation_artifacts: 'your-implementation-artifacts',
 };
 
+/**
+ * T259: the exported name for a variable CONFIG_VAR_MAP does not map, in the map's own style:
+ * `templateFile` and `template_file` both become `your-template-file`. Returns null for a token that
+ * is not a variable name (digits only, or no letters at all), which the caller leaves untouched.
+ * @param {string} varName
+ * @returns {string|null}
+ */
+function exportedVarName(varName) {
+  if (!/[A-Za-z]/.test(varName)) return null;
+  return prefixed(kebabOf(varName));
+}
+
+/**
+ * `templateFile`, `template_file` and `XMLParser` → `template-file`, `template-file`, `xml-parser`.
+ * An acronym is split off before the next word, except where that "word" is a lone plural `s`, so
+ * `getIDOf` → `get-id-of` and `storyIDs` → `story-ids` (R2 and R3 review). Known limit: an acronym
+ * then a final `Is` or `As` reads as a plural acronym — `userIDIs` → `user-idis`.
+ */
+function kebabOf(varName) {
+  return varName
+    .replace(/([A-Z]+)([A-Z](?!s(?![a-z]))[a-z])/g, '$1-$2')
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/[_-]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+}
+
+function prefixed(kebab) {
+  return kebab.startsWith('your-') ? kebab : `your-${kebab}`;
+}
+
+/**
+ * T259 (operator ruling 2026-11-05: flag, don't bundle): the files in a skill's source directory
+ * that the export does not carry, relative to that directory. What the export inlines is left out:
+ * SKILL.md, workflow.md, the `.md` files of `steps/` and `steps-*\/`, and inlined templates. So is
+ * framework metadata (`bmad-skill-manifest.yaml`), editor backups (`*.bak`) and dotfiles. A directory
+ * none of whose files is inlined is listed once, as `name/`; one that holds an inlined file, at any
+ * depth, is opened instead. A symlink is listed as what it points to.
+ * @param {string} skillDir
+ * @param {string[]} inlinedPaths - absolute paths of templates inlined into the export
+ * @returns {string[]}
+ */
+function listNotExported(skillDir, inlinedPaths = []) {
+  // Each path is compared in both forms, as given and with symlinks resolved: a skill reached
+  // through a symlink still recognises what it inlined (R2 review), and so does an inlined file that
+  // is itself a symlink to somewhere else (R3 review). A relative path is read from the working
+  // directory, as callers pass it (R3 review).
+  const real = (p) => {
+    try { return fs.realpathSync(p); } catch (_) { return path.resolve(p); }
+  };
+  const forms = (p) => [path.resolve(p), real(p)];
+  const inlined = [...new Set(inlinedPaths.flatMap(forms))];
+  // R3 review: a folder already walked is not walked again, so a symlink back up the tree is listed
+  // once instead of being followed until the OS gives up.
+  const walked = new Set([real(skillDir)]);
+  const skip = (name) => name.startsWith('.') || name.endsWith('.bak');
+  const out = [];
+  // R1 review: walk to whatever depth an inlined template sits at — one level was not enough, and
+  // `data/templates/` was reported missing while its template was inlined.
+  const walk = (dir, rel, top, inSteps) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (_) {
+      return;
+    }
+    for (const entry of entries) {
+      if (skip(entry.name)) continue;
+      const full = path.join(dir, entry.name);
+      const relPath = rel ? `${rel}/${entry.name}` : entry.name;
+      let isDir = entry.isDirectory();
+      if (entry.isSymbolicLink()) {
+        try { isDir = fs.statSync(full).isDirectory(); } catch (_) { isDir = false; }
+      }
+      if (!isDir) {
+        if (top && ['SKILL.md', 'workflow.md', 'bmad-skill-manifest.yaml'].includes(entry.name)) continue;
+        if (inSteps && entry.name.endsWith('.md')) continue;
+        if (!forms(full).some((f) => inlined.includes(f))) out.push(relPath);
+        continue;
+      }
+      // The same test `loadSkillSource` uses: it follows a symlinked `steps/` (statSync) but not a
+      // symlinked `steps-*` (Dirent.isDirectory), so neither does this (R2 review).
+      const isSteps = top && (entry.name === 'steps' || (entry.name.startsWith('steps-') && entry.isDirectory()));
+      const holdsInlined = forms(full).some((f) => inlined.some((p) => p.startsWith(f + path.sep)));
+      if ((!isSteps && !holdsInlined) || walked.has(real(full))) {
+        out.push(`${relPath}/`);
+        continue;
+      }
+      walked.add(real(full));
+      walk(full, relPath, false, isSteps);
+    }
+  };
+  walk(skillDir, '', true, false);
+  return out.sort();
+}
+
 function applyTransformations(text, warnings, options = {}) {
   let result = text;
 
@@ -578,18 +675,41 @@ function applyTransformations(text, warnings, options = {}) {
     result = result.replace(re, escapeReplacement(replacement));
   }
 
-  // Strip any remaining {var} placeholders that weren't in the config map (avoid leakage).
-  // Emit a warning per unique unmapped var so typos in CONFIG_VAR_MAP don't go silent.
-  const unmappedSeen = new Set();
-  result = result.replace(/\{\{?([\w_-]+)\}?\}/g, (_match, varName) => {
+  // Any remaining {var} that is not in the config map is renamed from its own name —
+  // `{templateFile}` → `your-template-file` — so no BMAD syntax leaks and two variables stay two
+  // (T259: every one used to become the same `your-project-context`, which made exported
+  // instructions say the wrong thing). A brace pair that is not a variable name, such as the regex
+  // quantifier `{2}`, is left as written, and so are `{else}` and `{endif}` in any case, which belong
+  // with the `{if …}` and `{/if}` this pattern never matched (R1 and R2 review). One warning per unique variable, so a typo in
+  // CONFIG_VAR_MAP does not go silent. When a name lands on one a different variable already got —
+  // a mapped one, or another unmapped one in this text — the warning says so (operator ruling
+  // 2026-11-06, R1 D1: warn, keep the name). A name a mapped variable uses counts as taken whether or
+  // not that variable is in the text. Two spellings of one variable (`projectType`,
+  // `project_type`) share a kebab form and are not a clash.
+  // `options.nameOwners` and `options.unmappedSeen` let exportSkill share one record of names and of
+  // warnings already given across every section, so a clash between sections is caught (R2 review)
+  // and a variable is warned about once per export (R3 review).
+  const unmappedSeen = options.unmappedSeen || new Set();
+  const owners = options.nameOwners || new Map();
+  for (const [k, v] of Object.entries(CONFIG_VAR_MAP)) {
+    owners.set(v, { kebab: kebabOf(k), label: `{${k}}` });
+  }
+  result = result.replace(/\{\{?([\w_-]+)\}?\}/g, (match, varName) => {
+    if (/^(else|endif)$/i.test(varName)) return match;
+    const exported = exportedVarName(varName);
+    if (exported === null) return match;
+    const kebab = kebabOf(varName);
+    const owner = owners.get(exported);
+    if (!owner) owners.set(exported, { kebab, label: `{${varName}}` });
     if (warnings && !unmappedSeen.has(varName)) {
       unmappedSeen.add(varName);
+      const clash = owner && owner.kebab !== kebab ? `, the same name as ${owner.label}` : '';
       warnings.push({
         type: 'unresolved-template-path',
-        message: `unmapped config var stripped via catch-all: {${varName}}`,
+        message: `unmapped config var {${varName}} exported as ${exported}${clash}`,
       });
     }
-    return 'your-project-context';
+    return exported;
   });
 
   // Phase 7: Collapse whitespace
@@ -1089,7 +1209,7 @@ function isExportableTier(tier) {
  * @param {string} skillName - The skill's canonical name (e.g., 'bmad-brainstorming')
  * @param {string} projectRoot - Absolute path to the project root
  * @param {object} [options] - Reserved for future use
- * @returns {{ instructions: string, persona: object, sections: object, warnings: object[] }}
+ * @returns {{ instructions: string, persona: object, sections: object, warnings: object[], notExported: string[] }}
  *
  * Throws:
  * - if the skill is not in the manifest
@@ -1144,11 +1264,13 @@ function exportSkill(skillName, projectRoot, _options = {}) {
 
   // 5. Apply transformations to each section (post-extraction cleanup)
   const transformedSections = {};
+  const nameOwners = new Map();
+  const unmappedSeen = new Set();
   for (const [key, value] of Object.entries(sections)) {
     if (value === null) {
       transformedSections[key] = null;
     } else {
-      transformedSections[key] = applyTransformations(value, warnings);
+      transformedSections[key] = applyTransformations(value, warnings, { nameOwners, unmappedSeen });
     }
   }
 
@@ -1219,6 +1341,13 @@ function exportSkill(skillName, projectRoot, _options = {}) {
 
   const instructions = parts.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 
+  // 6d. T259: name what the export leaves behind, so the operator knows what the instructions may
+  // point at. Not bundled (operator ruling 2026-11-05).
+  const notExported = listNotExported(skillDir, deps.templates.map((t) => t.path));
+  for (const rel of notExported) {
+    warnings.push({ type: 'source-file-not-exported', message: `not included in the export: ${rel}` });
+  }
+
   // 7. Final pass: catch any remaining unstripped XML tags as warnings
   const remainingTags = instructions.match(/<\/?(workflow|step|action|check|critical|output|ask)\b/g);
   if (remainingTags) {
@@ -1233,6 +1362,7 @@ function exportSkill(skillName, projectRoot, _options = {}) {
     persona,
     sections: transformedSections,
     warnings,
+    notExported,
   };
 }
 
@@ -1245,6 +1375,8 @@ module.exports = {
   exportSkill,
   // Internal helpers exported for testing
   CONFIG_VAR_MAP,
+  exportedVarName,
+  listNotExported,
   loadSkillRow,
   loadSkillSource,
   loadPersona,
